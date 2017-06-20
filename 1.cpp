@@ -384,6 +384,12 @@ auto tail(T& list) -> void
 
 
 template<class T>
+auto slice(T&) -> void
+{
+
+}
+
+template<class T>
 auto slice(T& list, std::int64_t i) -> void
 {
     if (list.empty()) {
@@ -1198,6 +1204,26 @@ auto slice(const T& list, std::int64_t i, std::int64_t j) -> T
 }
 
 
+template<std::size_t N>
+auto slice(const char(&s)[N]) -> std::string
+{
+    return slice(std::string{s});
+}
+
+template<std::size_t N>
+auto slice(const char(&s)[N], const std::int64_t i) -> std::string
+{
+    return slice(std::string{s}, i);
+}
+
+
+template<std::size_t N>
+auto slice(const char(&s)[N], const std::int64_t i, const std::int64_t j) -> std::string
+{
+    return slice(std::string{s}, i, j);
+}
+
+
 template<class T>
 auto front(const T& list) -> ContainerElemT<T>&
 {
@@ -1453,6 +1479,14 @@ int main() {
     assert((utils::slice(vector<int>{1,2,3,5,6}, -10, 50) == vector<int>{1,2,3,5,6}));
     assert((utils::slice(vector<int>{}, -5) == vector<int>{}));
     assert((utils::slice(set<int>{1,2,3,5,6}, -4, -1) == set<int>{2,3,5}));
+
+    assert(utils::slice("12345") == "12345");
+    assert(utils::slice("12345", 0, 4) == "1234");
+    assert(utils::slice("12345", 0, 5) == "12345");
+    assert(utils::slice("12345", 0, 60) == "12345");
+    assert(utils::slice("12345", -60, 60) == "12345");
+    assert(utils::slice("12345", -4, -1) == "234");
+    assert(utils::slice(std::string{"12345"}, -4, -1) == "234");
 
     assert((utils::tail(vector<int>{1,2,3,4}) == vector<int>{2,3,4}));
 
