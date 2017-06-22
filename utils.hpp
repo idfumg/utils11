@@ -280,19 +280,69 @@ auto remove_n(T& list, const std::size_t i) ->
 
 
 template<class T, class ValueT>
-auto remove(T& list, const ValueT& value) ->
+auto remove_(T& list, const ValueT& value) ->
+    typename std::enable_if<
+        mp_hasfn_with_params(T, erase, decltype(std::begin(list))) &&
+        !std::is_array<ValueT>::value &&
+        std::is_same<ContainerElemT<T>, ValueT>::value,
+        void
+    >::type
+{
+    auto it = std::find(std::begin(list), std::end(list), value);
+    if (it != std::end(list)) {
+        list.erase(it);
+    }
+}
+
+
+template<class T, class V>
+auto remove_(T& list1, const V& list2) ->
+    typename std::enable_if<
+        mp_hasfn_with_params(T, erase, decltype(std::begin(list1))) &&
+        !std::is_array<V>::value &&
+        std::is_same<ContainerElemT<T>, ContainerElemT<V>>::value,
+        void
+    >::type
+{
+    for (const auto& e : list2) {
+        remove_(list1, e);
+    }
+}
+
+
+auto remove_(std::string& list, const std::string& value) -> void
+{
+    if (value.size() > list.size()) {
+        return;
+    }
+
+    auto found = list.find(value);
+    if (found != std::string::npos) {
+        auto it = std::begin(list);
+        auto it2 = std::begin(list);
+        std::advance(it, found);
+        std::advance(it2, found + value.size());
+        list.erase(it, it2);
+    }
+}
+
+
+template<class T>
+auto remove(T&& value) -> void
+{
+
+}
+
+
+template<class T, class V, class... Args>
+auto remove(T& list, const V& value, Args&&... args) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, erase, decltype(std::begin(list))),
         void
     >::type
 {
-    auto it = std::begin(list);
-    while (it != std::end(list) and *it != value) {
-        ++it;
-    }
-    if (it != std::end(list)) {
-        list.erase(it);
-    }
+    remove_(list, value);
+    remove(list, std::forward<Args>(args)...);
 }
 
 
@@ -720,6 +770,26 @@ auto remove(const char(&s)[N], const V value) ->
 {
     std::string result{s};
     nocopy::remove(result, value);
+    return result;
+}
+
+
+template<class T, class V, class... Args>
+auto remove(const T& list, const V& value, Args&&... args) -> T
+{
+    T result{list};
+    nocopy::remove(result, value);
+    nocopy::remove(result, std::forward<Args>(args)...);
+    return result;
+}
+
+
+template<class V, class... Args>
+auto remove(const std::string& list, const V& value, Args&&... args) -> std::string
+{
+    std::string result{list};
+    nocopy::remove(result, value);
+    nocopy::remove(result, std::forward<Args>(args)...);
     return result;
 }
 

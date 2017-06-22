@@ -188,6 +188,12 @@ int main() {
     assert((utils::remove(set<int>{1,2,3}, 1) == set<int>{2,3}));
 
     assert(utils::remove("12345", '3') == "1245");
+    assert(utils::remove("12345", '3', '5', '2') == "14");
+    assert(utils::remove("12345", "34") == "125");
+    assert(utils::remove("12345", "5") == "1234");
+    assert(utils::remove("12345", "5", "12", '4') == "3");
+    assert((utils::remove(vector<int>{1,2,3}, 1) == vector<int>{2,3}));
+    assert((utils::remove(vector<int>{1,2,3}, vector<int>{2}, 3) == vector<int>{1}));
     assert(utils::remove_n("12345", 2) == "1245");
     assert(utils::push_front("12345", '6') == "612345");
     assert(utils::push_back("12345", '6') == "123456");
