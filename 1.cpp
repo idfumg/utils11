@@ -401,5 +401,23 @@ int main() {
         assert((t == vector<int>{3,5}));
     }
 
+
+    assert(utils::size(set<int>{1,2}) == 2);
+    assert(utils::size(set<int>{1,2}, set<int>{1,2,3}) == 5);
+    //assert(utils::size(set<int>{1,2}, set<int>{1,2,3}, 1) == 5); // compile-time error
+
+
+    assert(!utils::empty(set<int>{1,2}));
+    assert(!utils::empty(set<int>{1,2}, set<int>{1,2,3}));
+    assert(utils::empty(set<int>{1,2}, set<int>{1,2,3}, set<int>{}));
+    assert(utils::max(1,2,3,4) == 4);
+    assert(utils::max(8,1,2,3,4) == 8);
+    assert(utils::max(8,1) == 8);
+    assert(utils::max(8) == 8);
+    assert(utils::min(1,2,3,4) == 1);
+    assert(utils::min(8,1,2,3,4) == 1);
+    assert(utils::min(8,1) == 1);
+    assert(utils::min(8) == 8);
+
     return 0;
 }

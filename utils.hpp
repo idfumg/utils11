@@ -1608,9 +1608,88 @@ auto tail(const T& list) -> T
 
 
 template<class T>
-auto empty(const T& list) -> bool
+auto empty(const T& list) ->
+    typename std::enable_if<
+        decltype(list.size(), true){true},
+        bool
+    >::type
 {
     return list.empty();
+}
+
+
+template<class T, class... Args>
+auto empty(const T& param, Args&&... args) -> std::size_t
+{
+    return empty(param) + empty(std::forward<Args>(args)...);
+}
+
+
+template<class T>
+auto size(const T& param) ->
+    typename std::enable_if<
+        decltype(param.size(), true){true},
+        std::size_t
+    >::type
+{
+    return param.size();
+}
+
+
+template<class T, class... Args>
+auto size(const T& param, Args&&... args) -> std::size_t
+{
+    return size(param) + size(std::forward<Args>(args)...);
+}
+
+
+template<class T>
+auto max(const T& param) -> std::size_t
+{
+    return param;
+}
+
+
+template<class T>
+auto max(const T& param1, const T& param2) ->
+    typename std::enable_if<
+        decltype(std::max(param1, param2), true){true},
+        std::size_t
+    >::type
+{
+    return std::max(param1, param2);
+}
+
+
+template<class T, class... Args>
+auto max(const T& param1, const T& param2, Args&&... args) -> std::size_t
+{
+    return std::max(max(param1, param2), max(std::forward<Args>(args)...));
+}
+
+
+template<class T>
+auto min(const T& param) -> std::size_t
+{
+    return param;
+}
+
+
+template<class T>
+auto min(const T& param1, const T& param2) ->
+    typename std::enable_if<
+        decltype(std::min(param1, param2), true){true},
+        std::size_t
+    >::type
+{
+    return std::min(param1, param2);
+}
+
+
+template<class T, class... Args>
+auto min(const T& param1, const T& param2, Args&&... args) -> std::size_t
+{
+    return std::min(min(param1, param2), min(std::forward<Args>(args)...));
 }
 
 
