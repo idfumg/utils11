@@ -9,17 +9,13 @@
 #include <iostream>
 
 
-namespace mp11 {
+namespace utils {
 
-template<class...> struct voider {
-    using type = void;
-};
 
-template<class... T>
-using void_t = typename voider<T...>::type;
+template<class...> struct voider { using type = void; };
+template<class... T> using void_t = typename voider<T...>::type;
+// template<class...> using void_t = void;
 
-// template<class...>
-// using void_t = void;
 
 #define mp_hasfn_with_signature_declare(FNNAME)                         \
     template<typename, typename T>                                      \
@@ -82,16 +78,6 @@ using void_t = typename voider<T...>::type;
 #define mp_hasfn_with_params(CLASS, FNNAME, FN)  \
     mp_hasfn_with_params_##FNNAME<CLASS, FN>()
 
-} /* namespace mp11 */
-
-
-using namespace mp11;
-
-namespace utils {
-
-template<class T>
-using ContainerElemT = typename std::decay<decltype(*std::begin(std::declval<T&>()))>::type;
-
 
 mp_hasfn_with_params_declare(push_back);
 mp_hasfn_with_params_declare(push_front);
@@ -106,6 +92,12 @@ mp_hasfn_with_signature_declare(toString);
 mp_hasfn_with_signature_declare(at);
 mp_hasfn_with_signature_declare(data);
 mp_hasfn_with_params_declare(begin);
+
+
+template<class T>
+using ContainerElemT =
+    typename std::decay<decltype(*std::begin(std::declval<T&>()))>::type;
+
 
 namespace nocopy {
 
