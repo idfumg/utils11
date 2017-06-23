@@ -11,9 +11,6 @@
 
 namespace mp11 {
 
-using mp_true = std::integral_constant<bool, true>;
-using mp_false = std::integral_constant<bool, false>;
-
 template<class...> struct voider {
     using type = void;
 };
@@ -64,14 +61,14 @@ using void_t = typename voider<T...>::type;
     struct mp_hasfn_with_params_##FNNAME##_t {                          \
     private:                                                            \
     template<class T, class = void>                                     \
-    struct mp_hasfunction_ : mp_false {};                               \
+    struct mp_hasfunction_ : std::false_type {};                        \
                                                                         \
     template<class T>                                                   \
     struct mp_hasfunction_<T,                                           \
                            void_t<                                      \
                               decltype(                                 \
                                   std::declval<T&>().FNNAME(std::declval<Args>()...))>> \
-        : mp_true {};                                                   \
+        : std::true_type {};                                                     \
                                                                         \
     public:                                                             \
     using type = typename mp_hasfunction_<C>::type;                     \
