@@ -110,6 +110,8 @@ int main() {
     // assert(utils::contains(s1, '1')); // compile-time error
     assert(utils::contains(std::string{"12345"}, '1'));
     assert(utils::contains("12345", '1'));
+    assert(utils::contains("12345", "123", "45", '5'));
+    assert(!utils::contains("12345", "32"));
     // assert(utils::contains("12345", 1)); // compile-time error
     assert(utils::find(std::string{"12345"}, '3') != nullptr);
     // assert(utils::find(std::string{"12345"}, 3) != nullptr); // compile-time error
@@ -138,10 +140,12 @@ int main() {
     assert(!utils::is_sorted("412345"));
     assert(not utils::is_sorted(vector<int>{3,1,2,3}));
 
-    assert((utils::push_front(vector<int>{1,2,3}, 4) == vector<int>{4,1,2,3}));
+    assert((utils::push_front(vector<int>{1,2,3}, 4, 5) == vector<int>{5,4,1,2,3}));
+    assert((utils::push_front(vector<int>{1,2,3}, 4, vector<int>{5}) == vector<int>{5,4,1,2,3}));
     assert((utils::push_front(set<int>{1,2,3}, 4) == set<int>{1,2,3,4}));
 
     assert((utils::push_back(vector<int>{1,2,3}, 4) == vector<int>{1,2,3,4}));
+    assert((utils::push_back(vector<int>{1,2,3}, vector<int>{4}) == vector<int>{1,2,3,4}));
     assert((utils::push_back(set<int>{1,2,3}, 4) == set<int>{1,2,3,4}));
 
     {
@@ -191,18 +195,25 @@ int main() {
     assert(utils::remove("12345", '3', '5', '2') == "14");
     assert(utils::remove("12345", "34") == "125");
     assert(utils::remove("12345", "5") == "1234");
+    assert(utils::remove("12345", "5", vector<char>{'3','4'}) == "12");
     assert(utils::remove("12345", "5", "12", '4') == "3");
     assert((utils::remove(vector<int>{1,2,3}, 1) == vector<int>{2,3}));
     assert((utils::remove(vector<int>{1,2,3}, vector<int>{2}, 3) == vector<int>{1}));
+    assert((utils::remove(vector<int>{1,2,3,4}, vector<int>{2,4}, 3) == vector<int>{1}));
+    assert((utils::remove(vector<int>{'1','2'}, vector<int>{'2'}) == vector<int>{'1'}));
     assert(utils::remove_n("12345", 2) == "1245");
     assert(utils::push_front("12345", '6') == "612345");
-    assert(utils::push_back("12345", '6') == "123456");
+    assert(utils::push_front("12345", '6', '7') == "7612345");
+    assert(utils::push_front("12345", "67") == "6712345");
+    assert(utils::push_front("12345", "67", "8", '9', vector<char>{'1'}) == "1986712345");
+    assert(utils::push_back("12345", '6', "7", vector<char>{'8'}) == "12345678");
     assert(utils::push_back("12345", "67", '8') == "12345678");
     assert(utils::insert("12345", 2, '6') == "126345");
-
     assert(utils::insert("12345", 0, "67") == "6712345");
     assert(utils::insert("12345", 2, "67") == "1267345");
     assert(utils::insert("12345", 200, "67") == "1234567");
+#warning !
+    //assert(utils::insert("12345", 200, "6", "7", "8") == "12345678");
     assert(utils::insert(std::string{"12345"}, 200, vector<char>{'6','7'}) == "1234567");
     assert((utils::insert(vector<char>{'1','2'}, 200, std::string{"34567"}) ==
             vector<char>{'1','2','3','4','5','6','7'}));
@@ -407,11 +418,9 @@ int main() {
         assert((t == vector<int>{3,5}));
     }
 
-
     assert(utils::size(set<int>{1,2}) == 2);
     assert(utils::size(set<int>{1,2}, set<int>{1,2,3}) == 5);
     //assert(utils::size(set<int>{1,2}, set<int>{1,2,3}, 1) == 5); // compile-time error
-
 
     assert(!utils::empty(set<int>{1,2}));
     assert(!utils::empty(set<int>{1,2}, set<int>{1,2,3}));
@@ -424,6 +433,13 @@ int main() {
     assert(utils::min(8,1,2,3,4) == 1);
     assert(utils::min(8,1) == 1);
     assert(utils::min(8) == 8);
+
+#warning need more generic `all`
+#warning need more generic `any`
+#warning need more generic `count_if`
+#warning need more generic `count`
+#warning need more generic `to_string` (lists, maps, vectors, sets, hashmaps)
+#warning need generic for `maps`, `hashmaps`
 
     return 0;
 }
