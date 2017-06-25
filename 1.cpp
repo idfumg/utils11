@@ -170,15 +170,6 @@ int main() {
     assert((utils::pop_front(set<int>{1}) == set<int>{}));
     assert(utils::pop_front("12345") == "2345");
 
-    assert((utils::insert(vector<int>{1,2,3}, 0, 111) == vector<int>{111,1,2,3}));
-    assert((utils::insert(vector<int>{1,2,3}, 1, 111) == vector<int>{1,111,2,3}));
-    assert((utils::insert(vector<int>{1,2,3}, 2, 111) == vector<int>{1,2,111,3}));
-    assert((utils::insert(vector<int>{1,2,3}, 3, 111) == vector<int>{1,2,3,111}));
-    assert((utils::insert(vector<int>{1,2,3}, 4, 111) == vector<int>{1,2,3,111}));
-
-    assert((utils::insert(set<int>{1,2,3}, 4, 111) == set<int>{1,2,3,111}));
-    assert((utils::insert(set<int>{1,2,3}, 4, 111) == set<int>{1,111,2,3}));
-
     assert((utils::remove_n(vector<int>{1,2,3}, 0) == vector<int>{2,3}));
     assert((utils::remove_n(vector<int>{1,2,3}, 1) == vector<int>{1,3}));
     assert((utils::remove_n(vector<int>{1,2,3}, 2) == vector<int>{1,2}));
@@ -212,14 +203,22 @@ int main() {
     assert(utils::insert("12345", 0, "67") == "6712345");
     assert(utils::insert("12345", 2, "67") == "1267345");
     assert(utils::insert("12345", 200, "67") == "1234567");
-#warning !
-    //assert(utils::insert("12345", 200, "6", "7", "8") == "12345678");
+
+    assert(utils::insert("12345", 200, "6", "7", "8") == "12345678");
     assert(utils::insert(std::string{"12345"}, 200, vector<char>{'6','7'}) == "1234567");
     assert((utils::insert(vector<char>{'1','2'}, 200, std::string{"34567"}) ==
             vector<char>{'1','2','3','4','5','6','7'}));
-
     assert((utils::insert(vector<int>{1,2,3,4,5}, 2, vector<int>{6,7}) ==
             vector<int>{1,2,6,7,3,4,5}));
+
+    assert((utils::insert(vector<int>{1,2,3}, 0, 111) == vector<int>{111,1,2,3}));
+    assert((utils::insert(vector<int>{1,2,3}, 1, 111) == vector<int>{1,111,2,3}));
+    assert((utils::insert(vector<int>{1,2,3}, 2, 111) == vector<int>{1,2,111,3}));
+    assert((utils::insert(vector<int>{1,2,3}, 3, 111) == vector<int>{1,2,3,111}));
+    assert((utils::insert(vector<int>{1,2,3}, 4, 111) == vector<int>{1,2,3,111}));
+
+    assert((utils::insert(set<int>{1,2,3}, 4, 111) == set<int>{1,2,3,111}));
+    assert((utils::insert(set<int>{1,2,3}, 4, 111) == set<int>{1,111,2,3}));
 
     {
         vector<int> vx{1,2,3,4,5};
@@ -235,6 +234,12 @@ int main() {
         vector<int> vx{1,2,3,4,5};
         utils::nocopy::insert(vx, 2, vector<int>{6,7});
         assert((vx == vector<int>{1,2,6,7,3,4,5}));
+    }
+
+    {
+        std::string s{"12345"};
+        utils::nocopy::insert(s, 2, vector<char>{'6','7'});
+        assert((s == "1267345"));
     }
 
     { // compile-time error
@@ -272,7 +277,7 @@ int main() {
 
     assert(utils::join(vector<int>{1,2,3}, " ") == "1 2 3");
     assert(utils::join(vector<int>{1,2,3}) == "1,2,3");
-    assert(utils::join(utils::join(vv)) == "1,2,3,4,5,6");
+    assert(utils::join(utils::flatten(vv)) == "1,2,3,4,5,6");
     assert(utils::join(utils::split("a,b,c", ","), " ") == "a b c");
     assert(utils::join(std::string{"123"}) == "123");
     assert(utils::join("123") == "123");
@@ -433,13 +438,129 @@ int main() {
     assert(utils::min(8,1,2,3,4) == 1);
     assert(utils::min(8,1) == 1);
     assert(utils::min(8) == 8);
+    assert((utils::min(set<int>{1,2}, set<int>{1,3}) == set<int>{1,2}));
 
-#warning need more generic `all`
-#warning need more generic `any`
-#warning need more generic `count_if`
-#warning need more generic `count`
-#warning need more generic `to_string` (lists, maps, vectors, sets, hashmaps)
-#warning need generic for `maps`, `hashmaps`
+
+    struct BoolTest : public vector<bool> {
+        using vector<bool>::vector;
+        BoolTest(const bool value) : vector(std::initializer_list<bool>{true,false}) {
+            m_value = value;
+        }
+        operator bool() {
+            return m_value;
+        }
+        bool m_value;
+    };
+    assert(utils::all(true));
+    assert(!utils::all(false));
+    assert(utils::all(true, true));
+    assert(!utils::all(true, false, true));
+    assert(utils::all(true, true, true));
+    assert(utils::all(vector<bool>{true, true}));
+    assert(!utils::all(vector<bool>{true, false, true}, false));
+    assert(utils::all(BoolTest{true}));
+    assert(!utils::all(BoolTest{false}));
+
+    assert(utils::all_if([](const int i){return true;}, 1));
+    assert(utils::all_if([](const int i){return true;}, vector<int>{1,2,3}));
+    assert(!utils::all_if([](const int i){return i==1;}, vector<int>{1,2,3}));
+    assert(utils::all_if([](const int i){return i==1;}, vector<int>{1,1,1}));
+    assert(utils::all_if([](const int i){return i==1;}, vector<int>{1,1,1}, 1));
+
+    assert(utils::any(true));
+    assert(!utils::any(false));
+    assert(utils::any(false, true, false));
+    assert(!utils::any(false, false, false));
+    assert(!utils::any(std::vector<bool>{false, false, false}));
+    assert(utils::any(std::vector<bool>{false, false, true}));
+    assert(utils::any(false, std::vector<bool>{false, false, false}, true));
+
+    assert(utils::any_if([](const int i){return true;}, 1));
+    assert(utils::any_if([](const int i){return true;}, vector<int>{1,2,3}));
+    assert(utils::any_if([](const int i){return i==1;}, vector<int>{1,2,3}));
+    assert(!utils::any_if([](const int i){return i==4;}, vector<int>{1,2,3}));
+
+    assert(utils::count(1, std::vector<int>{1,1,2,3}) == 2);
+    assert(utils::count(1, std::vector<int>{4,3,2,3}) == 0);
+    assert(utils::count(1, 1,2,3,4,1) == 2);
+    assert(utils::count(1, std::vector<int>{4,3,2,3}, 1,2,3,1) == 2);
+    assert(utils::count(1, 3,std::vector<int>{4}, 1,2,1,std::vector<int>{4,1,3}) == 3);
+
+    assert(utils::count_if(
+               [](const int i){return i==2;},
+               std::vector<int>{1,1,1,3,4,5,2})
+           == 1);
+    assert(utils::count_if(
+               [](const int i){return i==1;},
+               std::vector<int>{1,1,1,3,4,5,2})
+           == 3);
+    assert(utils::count_if(
+               [](const int i){return i==1;},
+               5,std::vector<int>{1,1,1,3,4,5,2}, 1,2,3)
+           == 4);
+
+
+    assert(utils::to_string(std::vector<int>{1,2,3}) == "[1,2,3]");
+    assert(utils::to_string(
+               std::vector<std::vector<int>>{{
+                   std::vector<int>{1},
+                       std::vector<int>{2}}})
+           == "[[1],[2]]");
+    assert(utils::to_string(
+               std::set<std::vector<int>>{{
+                   std::vector<int>{1},
+                       std::vector<int>{2}}})
+           == "{[1],[2]}");
+    assert((utils::to_string(std::map<int, int>{{1,1}, {2,2}, {3,3}})
+        == R"({
+  1: 1,
+  2: 2,
+  3: 3
+})"));
+    assert((utils::to_string(std::map<int, std::vector<int>>{{1,{1}}, {2,{2}}})
+        == R"({
+  1: [1],
+  2: [2]
+})"));
+    assert((utils::to_string(std::unordered_map<int, int>{{1,1}})
+        == R"(#{
+  1: 1
+})"));
+
+
+    assert(utils::get(std::map<int, int>{{1,2}, {3,4}}, 1) == 2);
+    assert(utils::get(std::map<int, int>{{1,2}, {3,4}}, 3) == 4);
+
+    {
+        std::map<int, int> m{{1,2}, {3,4}};
+        auto& value = utils::get(m, 3);
+        value = 100;
+        assert((m == std::map<int, int>{{1,2}, {3,100}}));
+        assert(utils::get(m, 3) == 100);
+    }
+
+    assert(*utils::find(std::map<int, string>{{1,"2"}, {3,"4"}}, 3) == "4");
+
+    {
+        std::map<int, int> m{{1,2}, {3,4}};
+        auto value = utils::find(m, 3);
+        assert(value != nullptr);
+        *value = 100;
+        assert((m == std::map<int, int>{{1,2}, {3,100}}));
+        assert(utils::get(m, 3) == 100);
+    }
+
+    assert(utils::find(std::map<int, string>{{1,"2"}, {3,"4"}}, 4) == nullptr);
+    assert((utils::keys(std::map<int, string>{{1,"2"}, {3,"4"}})
+            == std::vector<int>{1, 3}));
+    assert((utils::values(std::map<int, string>{{1,"2"}, {3,"4"}})
+           == std::vector<string>{"2", "4"}));
+
+    assert(utils::find(std::unordered_map<int, string>{{1,"2"}, {3,"4"}}, 4) == nullptr);
+    assert((utils::keys(std::unordered_map<int, string>{{1,"2"}})
+            == std::vector<int>{1}));
+    assert((utils::values(std::unordered_map<int, string>{{1,"2"}})
+           == std::vector<string>{"2"}));
 
     return 0;
 }

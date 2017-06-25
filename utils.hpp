@@ -4,6 +4,9 @@
 
 #include <string>
 #include <vector>
+#include <set>
+#include <map>
+#include <unordered_map>
 #include <algorithm>
 #include <sstream>
 #include <iostream>
@@ -87,6 +90,7 @@ mp_hasfn_with_params_declare(erase);
 mp_hasfn_with_params_declare(pop_front);
 mp_hasfn_with_params_declare(pop_back);
 mp_hasfn_with_params_declare(reserve);
+mp_hasfn_with_params_declare(at);
 mp_hasfn_with_signature_declare(to_string);
 mp_hasfn_with_signature_declare(toString);
 mp_hasfn_with_signature_declare(at);
@@ -247,10 +251,13 @@ auto push_front(T& list, V&& value, Args&&... args) -> void
 
 
 template<class T, class V>
-auto insert(T& list, const std::size_t i, V&& value) ->
+auto insert_inner(T& list, const std::size_t i, V&& value) ->
     typename std::enable_if<
-        mp_hasfn_with_params_insert<T, decltype(std::begin(list)), ContainerElemT<T>>() &&
-        std::is_same<ContainerElemT<T>, typename std::decay<V>::type>::value,
+        mp_hasfn_with_params_insert<
+            T,
+            decltype(std::begin(list)),
+            typename std::decay<V>::type>() &&
+        !std::is_array<V>::value,
         void
     >::type
 {
@@ -269,26 +276,59 @@ auto insert(T& list, const std::size_t i, V&& value) ->
 
 
 template<class T, class V>
-auto insert(T& list, std::size_t i, V&& value) ->
+auto insert_inner(T& list, std::size_t i, const V& value) ->
     typename std::enable_if<
-        mp_hasfn_with_params_insert<T, decltype(std::begin(list)), ContainerElemT<T>>() &&
-        std::is_same<ContainerElemT<T>, ContainerElemT<V>>::value,
+        mp_hasfn_with_params_insert<
+            T,
+            decltype(std::begin(list)),
+            ContainerElemT<V>>() &&
+        !std::is_array<V>::value,
         void
     >::type
 {
     if (i >= list.size()) {
         for (auto&& e : value) {
-            push_back(list, std::forward<ContainerElemT<V>>(e));
+            push_back(list, e);
         }
     }
     else {
         for (auto&& e : value) {
             auto it = std::begin(list);
             std::advance(it, std::min(i, list.size()));
-            insert(list, i, std::forward<ContainerElemT<V>>(e));
+            insert_inner(list, i, e);
             i++;
         }
     }
+}
+
+
+auto insert_inner(std::string& list, const std::size_t i, const std::string& value) ->
+    void
+{
+    if (i == 0) {
+        push_front(list, value);
+    }
+    else if (i >= list.size()) {
+        push_back(list, value);
+    }
+    else {
+        list.insert(i, value);
+    }
+}
+
+
+template<class T>
+auto insert(T& list, const std::size_t i) -> void
+{
+
+}
+
+
+template<class T, class V, class... Args>
+auto insert(T& list, const std::size_t i, V&& v, Args&&... args) -> void
+{
+    insert_inner(list, i, std::forward<V>(v));
+    insert(list, i, std::forward<Args>(args)...);
 }
 
 
@@ -846,50 +886,20 @@ auto pop_front(const char(&s)[N]) -> std::string
  *******************************************************************************/
 
 
-template<class T1, class T2>
-auto insert(const T1& list, const std::size_t i, T2&& value) ->
-    typename std::enable_if<
-        std::is_same<ContainerElemT<T1>, ContainerElemT<T2>>::value,
-        T1
-    >::type
+template<class T, class... Args>
+auto insert(const T& param, const std::size_t i, Args&&... args) -> T
 {
-    T1 result{list};
-    nocopy::insert(result, i, std::forward<T2>(value));
+    T result{param};
+    nocopy::insert(result, i, std::forward<Args>(args)...);
     return result;
 }
 
 
-template<class T, class V>
-auto insert(const T& list, const std::size_t i, V&& value) ->
-    typename std::enable_if<
-        std::is_same<ContainerElemT<T>, typename std::decay<V>::type>::value,
-        T
-    >::type
+template<class... Args>
+auto insert(const std::string& param, const std::size_t i, Args&&... args) -> std::string
 {
-    T result{list};
-    nocopy::insert(result, i, std::forward<V>(value));
-    return result;
-}
-
-
-template<std::size_t N, class V>
-auto insert(const char(&s)[N], const std::size_t i, const V value) ->
-    typename std::enable_if<
-        sizeof(V) == sizeof(char),
-        std::string
-    >::type
-{
-    std::string result{s};
-    nocopy::insert(result, i, value);
-    return result;
-}
-
-
-template<std::size_t N, std::size_t M>
-auto insert(const char(&s)[N], const std::size_t i, const char(&s2)[M]) -> std::string
-{
-    std::string result{s};
-    nocopy::insert(result, i, std::string{s2});
+    std::string result{param};
+    nocopy::insert(result, i, std::forward<Args>(args)...);
     return result;
 }
 
@@ -1121,6 +1131,78 @@ auto to_string(const T& value) ->
 }
 
 
+template<template<class...> class T, class V, class... Args>
+auto to_string(const T<V, Args...>& value) ->
+    typename std::enable_if<
+        std::is_same<T<V, Args...>, std::vector<V, Args...>>::value,
+        std::string
+    >::type
+{
+    std::string result;
+    for (auto it = std::begin(value); it != std::end(value); ++it) {
+        if (not result.empty()) {
+            result += ",";
+        }
+        result += to_string(*it);
+    }
+    return "[" + result + "]";
+}
+
+
+template<template<class...> class T, class V, class... Args>
+auto to_string(const T<V, Args...>& value) ->
+    typename std::enable_if<
+        std::is_same<T<V, Args...>, std::set<V, Args...>>::value,
+        std::string
+    >::type
+{
+    std::string result;
+    for (auto it = std::begin(value); it != std::end(value); ++it) {
+        if (not result.empty()) {
+            result += ",";
+        }
+        result += to_string(*it);
+    }
+    return "{" + result + "}";
+}
+
+
+template<template<class...> class T, class V, class... Args>
+auto to_string(const T<V, Args...>& value) ->
+    typename std::enable_if<
+        std::is_same<T<V, Args...>, std::map<V, Args...>>::value,
+        std::string
+    >::type
+{
+    std::string result;
+    for (auto it = std::begin(value); it != std::end(value); ++it) {
+        if (not result.empty()) {
+            result += ",\n";
+        }
+        result += "  " + to_string(it->first) + ": " + to_string(it->second);
+    }
+    return "{\n" + result + "\n}";
+}
+
+
+template<template<class...> class T, class V, class... Args>
+auto to_string(const T<V, Args...>& value) ->
+    typename std::enable_if<
+        std::is_same<T<V, Args...>, std::unordered_map<V, Args...>>::value,
+        std::string
+    >::type
+{
+    std::string result;
+    for (auto it = std::begin(value); it != std::end(value); ++it) {
+        if (not result.empty()) {
+            result += ",\n";
+        }
+        result += "  " + to_string(it->first) + ": " + to_string(it->second);
+    }
+    return "#{\n" + result + "\n}";
+}
+
+
 /*******************************************************************************
  * contains
  *******************************************************************************/
@@ -1345,15 +1427,36 @@ auto get_if(FindFn fn, const T<ValueT, L...>& list) -> ValueT&
  *******************************************************************************/
 
 
-template<class Container, class T>
-auto count(const Container& container, const T& val)
-    -> typename std::iterator_traits<decltype(std::begin(container))>::difference_type
+template<class T, class ValueT>
+auto count(const ValueT& val, const T& param) ->
+    typename std::enable_if<
+        decltype(std::begin(param), true){true},
+        std::size_t
+    >::type
 {
     return
         std::count(
-            std::begin(container),
-            std::end(container),
+            std::begin(param),
+            std::end(param),
             val);
+}
+
+
+template<class ValueT, class T>
+auto count(const ValueT& value, const T& param) ->
+    typename std::enable_if<
+        decltype(value == param, true){true},
+        std::size_t
+    >::type
+{
+    return value == param ? 1 : 0;
+}
+
+
+template<class ValueT, class T, class... Args>
+auto count(const ValueT& value, const T& param, Args&&... args) -> std::size_t
+{
+    return count(value, param) + count(value, std::forward<Args>(args)...);
 }
 
 
@@ -1362,15 +1465,36 @@ auto count(const Container& container, const T& val)
  *******************************************************************************/
 
 
-template<class Container, class UnaryPredicate>
-auto count_if(const Container& container, UnaryPredicate&& pred)
-    -> typename std::iterator_traits<decltype(std::begin(container))>::difference_type
+template<class T, class Fn>
+auto count_if(Fn pred, const T& param) ->
+    typename std::enable_if<
+        decltype(std::begin(param), true){true},
+        std::size_t
+    >::type
 {
     return
         std::count_if(
-            std::begin(container),
-            std::end(container),
-            std::forward<UnaryPredicate>(pred));
+            std::begin(param),
+            std::end(param),
+            pred);
+}
+
+
+template<class Fn, class T>
+auto count_if(const Fn& fn, const T& param) ->
+    typename std::enable_if<
+        decltype(fn(param), true){true},
+        std::size_t
+    >::type
+{
+    return fn(param) ? 1 : 0;
+}
+
+
+template<class Fn, class T, class... Args>
+auto count_if(Fn fn, const T& param, Args&&... args) -> std::size_t
+{
+    return count_if(fn, param) + count_if(fn, std::forward<Args>(args)...);
 }
 
 
@@ -1379,14 +1503,75 @@ auto count_if(const Container& container, UnaryPredicate&& pred)
  *******************************************************************************/
 
 
-template<class Container, class UnaryPredicate>
-auto all(const Container& container, UnaryPredicate&& pred) -> bool
+template<class T>
+auto all(const T& param) ->
+    typename std::enable_if<
+        decltype(static_cast<bool>(param), true){true},
+        bool
+    >::type
+{
+    return param;
+}
+
+
+template<class T>
+auto all(const T& param) ->
+    typename std::enable_if<
+        decltype(std::begin(param), true){true},
+        bool
+    >::type
+{
+    for (auto&& e : param) {
+        if (not all(e)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+template<class T, class... Args>
+auto all(const T& param, Args&&... args) -> bool
+{
+    return all(param) and all(std::forward<Args>(args)...);
+}
+
+
+/*******************************************************************************
+ * all_if
+ *******************************************************************************/
+
+
+template<class T, class Fn>
+auto all_if(Fn pred, const T& param) ->
+    typename std::enable_if<
+        decltype(static_cast<bool>(param), true){true},
+        bool
+    >::type
+{
+    return param;
+}
+
+
+template<class T, class Fn>
+auto all_if(Fn pred, const T& container) ->
+    typename std::enable_if<
+        decltype(std::begin(container), true){true},
+        bool
+    >::type
 {
     return
         std::all_of(
             std::begin(container),
             std::end(container),
-            std::forward<UnaryPredicate>(pred));
+            std::forward<Fn>(pred));
+}
+
+
+template<class Fn, class T, class... Args>
+auto all_if(Fn pred, const T& param, Args&&... args) -> bool
+{
+    return all_if(pred, param) and all_if(pred, std::forward<Args>(args)...);
 }
 
 
@@ -1395,14 +1580,75 @@ auto all(const Container& container, UnaryPredicate&& pred) -> bool
  *******************************************************************************/
 
 
-template<class Container, class UnaryPredicate>
-auto any(const Container& container, UnaryPredicate&& pred) -> bool
+template<class T>
+auto any(const T& param) ->
+    typename std::enable_if<
+        decltype(static_cast<bool>(param), true){true},
+        bool
+    >::type
+{
+    return param;
+}
+
+
+template<class T>
+auto any(const T& param) ->
+    typename std::enable_if<
+        decltype(std::begin(param), true){true},
+        bool
+    >::type
+{
+    for (auto&& e : param) {
+        if (any(e)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+template<class T, class... Args>
+auto any(const T& param, Args&&... args) -> bool
+{
+    return any(param) or any(std::forward<Args>(args)...);
+}
+
+
+/*******************************************************************************
+ * any_if
+ *******************************************************************************/
+
+
+template<class T, class Fn>
+auto any_if(Fn pred, const T& param) ->
+    typename std::enable_if<
+        decltype(static_cast<bool>(param), true){true},
+        bool
+    >::type
+{
+    return param;
+}
+
+
+template<class T, class Fn>
+auto any_if(Fn pred, const T& param) ->
+    typename std::enable_if<
+        decltype(std::begin(param), true){true},
+        bool
+    >::type
 {
     return
         std::any_of(
-            std::begin(container),
-            std::end(container),
-            std::forward<UnaryPredicate>(pred));
+            std::begin(param),
+            std::end(param),
+            std::forward<Fn>(pred));
+}
+
+
+template<class Fn, class T, class... Args>
+auto any_if(Fn pred, const T& param, Args&&... args) -> bool
+{
+    return any_if(pred, param) or any_if(pred, std::forward<Args>(args)...);
 }
 
 
@@ -1469,6 +1715,23 @@ auto reduce(const Container& container, T&& init, const BinaryOperation& op) -> 
 
 
 /*******************************************************************************
+ * flatten
+ *******************************************************************************/
+
+
+template<class T>
+auto flatten(const T& list) ->
+    typename std::decay<decltype(*std::begin(list))>::type
+{
+    typename std::decay<decltype(*std::begin(list))>::type result;
+    for (const auto& elem : list) {
+        result = combine(result, elem);
+    }
+    return result;
+}
+
+
+/*******************************************************************************
  * join
  *******************************************************************************/
 
@@ -1483,18 +1746,6 @@ auto join(const T<N, L...>& list, const std::string& delimiter = ",") ->
             result += delimiter;
         }
         result += to_string(elem);
-    }
-    return result;
-}
-
-
-template<class T>
-auto join(const T& list) ->
-    typename std::decay<decltype(*std::begin(list))>::type
-{
-    typename std::decay<decltype(*std::begin(list))>::type result;
-    for (const auto& elem : list) {
-        result = combine(result, elem);
     }
     return result;
 }
@@ -2041,7 +2292,7 @@ auto max(const T& param1, const T& param2, Args&&... args) -> std::size_t
 
 
 template<class T>
-auto min(const T& param) -> std::size_t
+auto min(const T& param) -> T
 {
     return param;
 }
@@ -2051,7 +2302,7 @@ template<class T>
 auto min(const T& param1, const T& param2) ->
     typename std::enable_if<
         decltype(std::min(param1, param2), true){true},
-        std::size_t
+        T
     >::type
 {
     return std::min(param1, param2);
@@ -2059,9 +2310,73 @@ auto min(const T& param1, const T& param2) ->
 
 
 template<class T, class... Args>
-auto min(const T& param1, const T& param2, Args&&... args) -> std::size_t
+auto min(const T& param1, const T& param2, Args&&... args) -> T
 {
     return std::min(min(param1, param2), min(std::forward<Args>(args)...));
+}
+
+
+/*******************************************************************************
+ * std::map
+ *******************************************************************************/
+
+
+template<class T, class K>
+auto get(const T& param, const K& key) ->
+    typename std::enable_if<
+        mp_hasfn_with_params(T, at, typename T::key_type) &&
+        !std::is_array<T>::value,
+        typename std::decay<typename T::mapped_type>::type&
+    >::type
+{
+    return const_cast<typename std::decay<typename T::mapped_type>::type&>(param.at(key));
+}
+
+
+template<class T, class K>
+auto find(const T& param, const K& key) ->
+    typename std::enable_if<
+        mp_hasfn_with_params(T, at, typename T::key_type) &&
+        !std::is_array<T>::value,
+        typename std::decay<typename T::mapped_type>::type*
+    >::type
+{
+    auto it = param.find(key);
+    if (it == std::end(param)) {
+        return nullptr;
+    }
+    return (typename std::decay<typename T::mapped_type>::type*)(&param.at(key));
+}
+
+
+template<class T>
+auto keys(const T& param) ->
+    typename std::enable_if<
+        decltype(std::declval<typename T::key_type>(), true){true} &&
+        !std::is_array<T>::value,
+        std::vector<typename std::decay<typename T::key_type>::type>
+    >::type
+{
+    std::vector<typename std::decay<typename T::key_type>::type> result;
+    for (auto it = std::begin(param); it != std::end(param); ++it) {
+        nocopy::push_back(result, it->first);
+    }
+    return result;
+}
+
+template<class T>
+auto values(const T& param) ->
+    typename std::enable_if<
+        decltype(std::declval<typename T::mapped_type>(), true){true} &&
+        !std::is_array<T>::value,
+        std::vector<typename std::decay<typename T::mapped_type>::type>
+    >::type
+{
+    std::vector<typename std::decay<typename T::mapped_type>::type> result;
+    for (auto it = std::begin(param); it != std::end(param); ++it) {
+        nocopy::push_back(result, it->second);
+    }
+    return result;
 }
 
 
