@@ -105,13 +105,24 @@ int main() {
     assert(!utils::contains("123", set<char>{'1','2','3','4'}));
     assert(utils::contains("12345", "234"));
 
-
     // assert(utils::contains(s1, '1')); // compile-time error
     assert(utils::contains(std::string{"12345"}, '1'));
     assert(utils::contains("12345", '1'));
     assert(utils::contains("12345", "123", "45", '5'));
     assert(!utils::contains("12345", "32"));
     // assert(utils::contains("12345", 1)); // compile-time error
+
+    assert(utils::index(std::string{"12345"}, '3') == 2);
+    assert(utils::index(std::string{"12345"}, '1') == 0);
+    assert(utils::index(std::string{"12345"}, '5') == 4);
+    assert(utils::index(std::string{"12345"}, '6') == -1);
+    assert(utils::index(std::string{"123453"}, '3', 3) == 5);
+    assert(utils::index(std::string{"123453"}, '3', 10) ==-1);
+    assert(utils::index(std::string{"123453"}, '3', 6) ==-1);
+    assert(utils::index(std::vector<char>{'1','2','3'}, '3') == 2);
+    assert(utils::index(std::vector<char>{'1','2','3','2'}, '2', 2) == 3);
+    assert(utils::index(std::string{"12345"}, "3") == 2);
+
     assert(utils::find(std::string{"12345"}, '3') != nullptr);
     // assert(utils::find(std::string{"12345"}, 3) != nullptr); // compile-time error
     assert(utils::find(v1, 9) != nullptr);
@@ -201,7 +212,7 @@ int main() {
     assert(utils::insert("12345", 2, '6') == "126345");
     assert(utils::insert("12345", 0, "67") == "6712345");
     assert(utils::insert("12345", 2, "67") == "1267345");
-    assert(utils::insert("12345", 200, "67") == "1234567");
+    assert(utils::insert("12345", 200, "67й") == "1234567й");
 
     assert(utils::insert("12345", 200, "6", "7", "8") == "12345678");
     assert(utils::insert(std::string{"12345"}, 200, vector<char>{'6','7'}) == "1234567");
@@ -275,8 +286,8 @@ int main() {
     const vector<vector<int>> vv = {{ {1,2,3}, {4,5,6} } };
 
     assert(utils::join(vector<int>{1,2,3}, " ") == "1 2 3");
-    assert(utils::join(vector<int>{1,2,3}) == "1,2,3");
-    assert(utils::join(utils::flatten(vv)) == "1,2,3,4,5,6");
+    assert(utils::join(vector<int>{1,2,3}, ",") == "1,2,3");
+    assert(utils::join(utils::flatten(vv), ",") == "1,2,3,4,5,6");
     assert(utils::join(utils::split("a,b,c", ","), " ") == "a b c");
     assert(utils::join(std::string{"123"}) == "123");
     assert(utils::join("123") == "123");
@@ -285,28 +296,75 @@ int main() {
     assert(utils::trim("   asd") == "asd");
     assert(utils::trim("asd  ") == "asd");
     assert(utils::trim("asd") == "asd");
+    assert(utils::trim(" asd ") == "asd");
     assert(utils::ltrim("  asd  ") == "asd  ");
     assert(utils::ltrim("asd  ") == "asd  ");
+    assert(utils::ltrim("s") == "s");
+    assert(utils::ltrim("") == "");
+    assert(utils::ltrim(" ") == "");
     assert(utils::rtrim("  asd  ") == "  asd");
     assert(utils::rtrim("asd  ") == "asd");
+    assert(utils::rtrim("йцу  ") == "йцу");
+
+    {
+        std::string s {" asd "};
+        utils::nocopy::ltrim(s);
+        assert(s == "asd ");
+        utils::nocopy::rtrim(s);
+        assert(s == "asd");
+    }
+
+    {
+        std::string s {" asd "};
+        utils::nocopy::trim(s);
+        assert(s == "asd");
+    }
+
+    assert((utils::trim(std::vector<char>{' ', '1', ' '}) == std::vector<char>{'1'}));
+    assert((utils::ltrim(std::vector<char>{' ', '1', ' '}) == std::vector<char>{'1', ' '}));
+    assert((utils::rtrim(std::vector<char>{' ', '1', ' '}) == std::vector<char>{' ', '1'}));
 
     assert(utils::combine(std::string("asd "), std::string("fgh")) == "asd fgh");
     assert(utils::combine(std::string("asd "), "fgh") == "asd fgh");
     assert(utils::combine("asd ", "fgh") == "asd fgh");
+    assert(utils::combine("asd ", "йцу") == "asd йцу");
 
     assert(utils::to_lower("aSdDUnnbD") == "asddunnbd");
+    assert(utils::to_lower(std::vector<char>{'Q'}) == std::vector<char>{'q'});
+    // assert(utils::to_lower("aSdDUnnbDЙЦУ") == "asddunnbdйцу"); // no ascii failed
     assert(utils::to_upper("aSdDUnnbD") == "ASDDUNNBD");
+    assert(utils::to_upper(std::vector<char>{'q'}) == std::vector<char>{'Q'});
+    // assert(utils::to_upper("aSdDUnnbDйцу") == "ASDDUNNBDЙЦУ"); // no ascii failed
 
     assert(utils::contains("aSdDUnnbD", "nnb"));
     assert(utils::contains(std::string{"aSdDUnnbD"}, "nnb", 'n'));
     assert(utils::contains("aSdDUnnbD", "nnb", 'n'));
+    assert(utils::contains("aSdDUйцуnnbD", "йцу"));
+    assert(utils::contains("aSdDUйцУnnbD", "йцУ"));
     assert(!utils::contains("aSdDUnnbD", "nnb", 'n', 'z'));
     assert(utils::contains("aSdDUnnbD", "nnb", 'n', vector<char>{'n','n','b','D'}));
+
     assert(utils::starts_with("aSdDUnnbD", "aSd"));
+    assert(utils::starts_with("йцуaSdDUnnbD", "йцу"));
+    assert(utils::starts_with(std::vector<int>{1,2,3}, std::vector<int>{1,2}));
+    assert(utils::starts_with(std::vector<int>{1,2,3}, std::vector<int>{1,2,3}));
+    assert(!utils::starts_with(std::vector<int>{1,2,3}, std::vector<int>{1,2,4}));
+    assert(utils::starts_with(std::vector<int>{1,2,3}, 1));
+    assert(!utils::starts_with(std::vector<int>{1,2,3}, 2));
+
     assert(utils::ends_with("aSdDUnnbDx", "nbDx"));
+    assert(utils::ends_with("aSdDUnnbDxйцу", "йцу"));
+    assert(utils::ends_with("aSdDUnnbDxйцУ", "йцУ"));
+    assert(utils::ends_with(std::vector<int>{1,2,3}, 3));
+    assert(!utils::ends_with(std::vector<int>{1,2,3}, 2));
+    assert(utils::ends_with(std::vector<int>{1,2,3}, std::vector<int>{1,2,3}));
+    assert(utils::ends_with(std::vector<int>{1,2,3}, std::vector<int>{2,3}));
+    assert(!utils::ends_with(std::vector<int>{1,2,3}, std::vector<int>{2,4}));
 
     assert(utils::capitalize("aSdDUnnbDx") == "Asddunnbdx");
     assert(utils::capitalize(std::string{"aSdDUnnbDx"}) == "Asddunnbdx");
+    assert(utils::capitalize("aSdDUnnbDxйцу") == "Asddunnbdxйцу");
+    // assert(utils::capitalize("йaSdDUnnbDxйцу") == "Йasddunnbdxйцу"); // no ascii failed
 
     utils::nocopy::foreach([](const int& i){}, v1);
 
@@ -379,7 +437,7 @@ int main() {
     assert(utils::slice("12345") == "12345");
     assert(utils::slice("12345", 0, 4) == "1234");
     assert(utils::slice("12345", 0, 5) == "12345");
-    assert(utils::slice("12345", 0, 60) == "12345");
+    assert(utils::slice("12345йцу", 0, 60) == "12345йцу");
     assert(utils::slice("12345", -60, 60) == "12345");
     assert(utils::slice("12345", -4, -1) == "234");
     assert(utils::slice(std::string{"12345"}, -4, -1) == "234");
@@ -450,6 +508,7 @@ int main() {
         }
         bool m_value;
     };
+
     assert(utils::all(true));
     assert(!utils::all(false));
     assert(utils::all(true, true));
@@ -457,7 +516,7 @@ int main() {
     assert(utils::all(true, true, true));
     assert(utils::all(vector<bool>{true, true}));
     assert(!utils::all(vector<bool>{true, false, true}, false));
-    assert(utils::all(BoolTest{true}));
+    assert(utils::all(BoolTest{true}, true, BoolTest{true}));
     assert(!utils::all(BoolTest{false}));
 
     assert(utils::all_if([](const int i){return true;}, 1));
@@ -503,12 +562,12 @@ int main() {
     assert(utils::to_string(
                std::vector<std::vector<int>>{{
                    std::vector<int>{1},
-                       std::vector<int>{2}}})
+                   std::vector<int>{2}}})
            == "[[1],[2]]");
     assert(utils::to_string(
                std::set<std::vector<int>>{{
                    std::vector<int>{1},
-                       std::vector<int>{2}}})
+                   std::vector<int>{2}}})
            == "{[1],[2]}");
     assert((utils::to_string(std::map<int, int>{{1,1}, {2,2}, {3,3}})
         == R"({
