@@ -1464,13 +1464,13 @@ inline auto find(T&& list, const ValueT& value) ->
  * find_if
  *******************************************************************************/
 
-
-template<template<class...> class T, class ValueT, class... L, class FindFn>
-inline auto find_if(FindFn fn, const T<ValueT, L...>& list) -> ValueT*
+                 
+template<class T, class FindFn>
+inline auto find_if(FindFn fn, const T& list) -> decltype(list.at(0))*
 {
     for (const auto& elem : list) {
         if (fn(elem)) {
-            return const_cast<ValueT*>(&elem);
+            return const_cast<decltype(list.at(0))*>(&elem);
         }
     }
     return nullptr;
