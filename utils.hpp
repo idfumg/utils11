@@ -110,21 +110,30 @@ using ContainerElemT =
  *******************************************************************************/
 
 
+template<std::size_t N>
+inline auto size_(const char(&param)[N]) -> std::size_t
+{
+    return std::string(param).size();
+}
+
+
 template<class T>
-auto size(const T& param) ->
-    typename std::enable_if<
-        decltype(param.size(), true){true},
-        std::size_t
-    >::type
+inline auto size_(const T& param) -> std::size_t
 {
     return param.size();
 }
 
 
-template<class T, class... Args>
-auto size(const T& param, Args&&... args) -> std::size_t
+inline auto size() -> std::size_t
 {
-    return size(param) + size(std::forward<Args>(args)...);
+    return 0;
+}
+
+
+template<class T, class... Args>
+inline auto size(const T& param, Args&&... args) -> std::size_t
+{
+    return size_(param) + size(std::forward<Args>(args)...);
 }
 
 
@@ -133,21 +142,30 @@ auto size(const T& param, Args&&... args) -> std::size_t
  *******************************************************************************/
 
 
-template<class T>
-auto empty(const T& list) ->
-    typename std::enable_if<
-    decltype(size(list), true){true},
-        bool
-    >::type
+template<std::size_t N>
+inline auto empty_(const char(&param)[N]) -> bool
 {
-    return list.empty();
+    return std::string(param).empty();
+}
+
+
+template<class T>
+inline auto empty_(const T& param) -> bool
+{
+    return param.empty();
+}
+
+
+inline auto empty() -> bool
+{
+    return false;
 }
 
 
 template<class T, class... Args>
-auto empty(const T& param, Args&&... args) -> std::size_t
+inline auto empty(const T& param, Args&&... args) -> bool
 {
-    return empty(param) + empty(std::forward<Args>(args)...);
+    return empty_(param) || empty(std::forward<Args>(args)...);
 }
 
 
@@ -161,10 +179,9 @@ namespace nocopy {
 
 
 template<class T, class V>
-auto push_back_inner(T& list, V&& value) ->
+inline auto push_back_inner(T& list, V&& value) ->
     typename std::enable_if<
-        mp_hasfn_with_params(T, push_back, ContainerElemT<T>) &&
-        std::is_same<ContainerElemT<T>, typename std::decay<V>::type>::value,
+        decltype(list.push_back(std::forward<V>(value)), true){true},
         void
     >::type
 {
@@ -173,10 +190,9 @@ auto push_back_inner(T& list, V&& value) ->
 
 
 template<class T, class V>
-auto push_back_inner(T& list, V&& value) ->
+inline auto push_back_inner(T& list, V&& value) ->
     typename std::enable_if<
-        mp_hasfn_with_params(T, insert, ContainerElemT<T>) &&
-        std::is_same<ContainerElemT<T>, typename std::decay<V>::type>::value,
+        decltype(list.insert(std::forward<V>(value)), true){true},
         void
     >::type
 {
@@ -184,14 +200,14 @@ auto push_back_inner(T& list, V&& value) ->
 }
 
 
-auto push_back_inner(std::string& list, const std::string& value) -> void
+inline auto push_back_inner(std::string& list, const std::string& value) -> void
 {
     list.append(value);
 }
 
 
 template<class T, class V>
-auto push_back_inner(T& list, const V& value) ->
+inline auto push_back_inner(T& list, const V& value) ->
     typename std::enable_if<
         std::is_same<ContainerElemT<T>, ContainerElemT<V>>::value &&
         !std::is_array<T>::value && !std::is_array<V>::value,
@@ -205,14 +221,14 @@ auto push_back_inner(T& list, const V& value) ->
 
 
 template<class T>
-auto push_back(T&) -> void
+inline auto push_back(T&) -> void
 {
 
 }
 
 
 template<class T, class V, class... Args>
-auto push_back(T& list, V&& value, Args&&... args) -> void
+inline auto push_back(T& list, V&& value, Args&&... args) -> void
 {
     push_back_inner(list, std::forward<V>(value));
     push_back(list, std::forward<Args>(args)...);
@@ -225,7 +241,7 @@ auto push_back(T& list, V&& value, Args&&... args) -> void
 
 
 template<class T, class V>
-auto push_front_inner(T& list, V&& value) ->
+inline auto push_front_inner(T& list, V&& value) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, push_front, V) &&
         std::is_same<ContainerElemT<T>, typename std::decay<V>::type>::value,
@@ -237,10 +253,9 @@ auto push_front_inner(T& list, V&& value) ->
 
 
 template<class T, class V>
-auto push_front_inner(T& list, V&& value) ->
+inline auto push_front_inner(T& list, V&& value) ->
     typename std::enable_if<
-        mp_hasfn_with_params_insert<T, decltype(std::begin(list)), ContainerElemT<T>>() &&
-        std::is_same<ContainerElemT<T>, typename std::decay<V>::type>::value,
+        decltype(list.insert(std::begin(list), std::forward<V>(value)), true){true},
         void
     >::type
 {
@@ -248,16 +263,16 @@ auto push_front_inner(T& list, V&& value) ->
 }
 
 
-auto push_front_inner(std::string& list, const std::string& value) -> void
+inline auto push_front_inner(std::string& list, const std::string& value) -> void
 {
     list.insert(0, value);
 }
 
+
 template<class T, class V>
-auto push_front_inner(T& list, V&& value) ->
+inline auto push_front_inner(T& list, V&& value) ->
     typename std::enable_if<
-        mp_hasfn_with_params_insert<T, std::size_t, ContainerElemT<T>>() &&
-        std::is_same<ContainerElemT<T>, typename std::decay<V>::type>::value,
+        decltype(list.insert(std::size_t{0}, std::forward<V>(value)), true){true},
         void
     >::type
 {
@@ -266,7 +281,7 @@ auto push_front_inner(T& list, V&& value) ->
 
 
 template<class T, class V>
-auto push_front_inner(T& list, const V& value) ->
+inline auto push_front_inner(T& list, const V& value) ->
     typename std::enable_if<
         std::is_same<ContainerElemT<T>, ContainerElemT<V>>::value &&
         !std::is_array<T>::value && !std::is_array<V>::value,
@@ -280,14 +295,14 @@ auto push_front_inner(T& list, const V& value) ->
 
 
 template<class T>
-auto push_front(T&) -> void
+inline auto push_front(T&) -> void
 {
 
 }
 
 
 template<class T, class V, class... Args>
-auto push_front(T& list, V&& value, Args&&... args) -> void
+inline auto push_front(T& list, V&& value, Args&&... args) -> void
 {
     push_front_inner(list, std::forward<V>(value));
     push_front(list, std::forward<Args>(args)...);
@@ -300,7 +315,7 @@ auto push_front(T& list, V&& value, Args&&... args) -> void
 
 
 template<class T, class V>
-auto insert_inner(T& list, const std::size_t i, V&& value) ->
+inline auto insert_inner(T& list, const std::size_t i, V&& value) ->
     typename std::enable_if<
         mp_hasfn_with_params_insert<
             T,
@@ -325,7 +340,7 @@ auto insert_inner(T& list, const std::size_t i, V&& value) ->
 
 
 template<class T, class V>
-auto insert_inner(T& list, std::size_t i, const V& value) ->
+inline auto insert_inner(T& list, std::size_t i, const V& value) ->
     typename std::enable_if<
         mp_hasfn_with_params_insert<
             T,
@@ -351,7 +366,7 @@ auto insert_inner(T& list, std::size_t i, const V& value) ->
 }
 
 
-auto insert_inner(std::string& list, const std::size_t i, const std::string& value) ->
+inline auto insert_inner(std::string& list, const std::size_t i, const std::string& value) ->
     void
 {
     if (i == 0) {
@@ -367,14 +382,14 @@ auto insert_inner(std::string& list, const std::size_t i, const std::string& val
 
 
 template<class T>
-auto insert(T& list, const std::size_t i) -> void
+inline auto insert(T& list, const std::size_t i) -> void
 {
 
 }
 
 
 template<class T, class V, class... Args>
-auto insert(T& list, const std::size_t i, V&& v, Args&&... args) -> void
+inline auto insert(T& list, const std::size_t i, V&& v, Args&&... args) -> void
 {
     insert_inner(list, i, std::forward<V>(v));
     insert(list, i, std::forward<Args>(args)...);
@@ -387,7 +402,7 @@ auto insert(T& list, const std::size_t i, V&& v, Args&&... args) -> void
 
 
 template<class T>
-auto pop_front(T& list) ->
+inline auto pop_front(T& list) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, pop_front, void),
         void
@@ -402,7 +417,7 @@ auto pop_front(T& list) ->
 
 
 template<class T>
-auto pop_front(T& list) ->
+inline auto pop_front(T& list) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, erase, decltype(std::begin(list))),
         void
@@ -422,7 +437,7 @@ auto pop_front(T& list) ->
 
 
 template<class T>
-auto pop_back(T& list) ->
+inline auto pop_back(T& list) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, pop_back, void),
         void
@@ -437,7 +452,7 @@ auto pop_back(T& list) ->
 
 
 template<class T>
-auto pop_back(T& list) ->
+inline auto pop_back(T& list) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, erase, decltype(std::begin(list))),
         void
@@ -459,7 +474,7 @@ auto pop_back(T& list) ->
 
 
 template<class T>
-auto remove_n(T& list, const std::size_t i) ->
+inline auto remove_n(T& list, const std::size_t i) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, erase, decltype(std::begin(list))),
         void
@@ -480,7 +495,7 @@ auto remove_n(T& list, const std::size_t i) ->
 
 
 template<class T, class ValueT>
-auto remove_(T& list, const ValueT& value) ->
+inline auto remove_(T& list, const ValueT& value) ->
     typename std::enable_if<
         !std::is_array<ValueT>::value &&
         std::is_same<ContainerElemT<T>, ValueT>::value,
@@ -495,7 +510,7 @@ auto remove_(T& list, const ValueT& value) ->
 
 
 template<class T, class V>
-auto remove_(T& list1, const V& list2) ->
+inline auto remove_(T& list1, const V& list2) ->
     typename std::enable_if<
         !std::is_array<V>::value &&
         std::is_same<ContainerElemT<T>, ContainerElemT<V>>::value,
@@ -508,7 +523,7 @@ auto remove_(T& list1, const V& list2) ->
 }
 
 
-auto remove_(std::string& list, const std::string& value) -> void
+inline auto remove_(std::string& list, const std::string& value) -> void
 {
     if (size(value) > size(list)) {
         return;
@@ -526,14 +541,14 @@ auto remove_(std::string& list, const std::string& value) -> void
 
 
 template<class T>
-auto remove(T&& value) -> void
+inline auto remove(T&& value) -> void
 {
 
 }
 
 
 template<class T, class V, class... Args>
-auto remove(T& list, const V& value, Args&&... args) ->
+inline auto remove(T& list, const V& value, Args&&... args) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, erase, decltype(std::begin(list))),
         void
@@ -550,7 +565,7 @@ auto remove(T& list, const V& value, Args&&... args) ->
 
 
 template<class T, class SizeT>
-auto reserve(T&, const SizeT) ->
+inline auto reserve(T&, const SizeT) ->
     typename std::enable_if<
         !mp_hasfn_with_params(T, reserve, SizeT),
         void
@@ -561,7 +576,7 @@ auto reserve(T&, const SizeT) ->
 
 
 template<class T, class SizeT>
-auto reserve(T& list, const SizeT value) -> decltype(list.reserve(value), (void)0)
+inline auto reserve(T& list, const SizeT value) -> decltype(list.reserve(value), (void)0)
 {
     list.reserve(value);
 }
@@ -573,7 +588,7 @@ auto reserve(T& list, const SizeT value) -> decltype(list.reserve(value), (void)
 
 
 template<class T, class Fn>
-auto filter(Fn fn, T& list) -> void
+inline auto filter(Fn fn, T& list) -> void
 {
     list.erase(std::copy_if(
                    std::begin(list),
@@ -590,7 +605,7 @@ auto filter(Fn fn, T& list) -> void
 
 
 template<class T>
-auto sort(T& list) -> void
+inline auto sort(T& list) -> void
 {
     std::sort(
         std::begin(list),
@@ -599,7 +614,7 @@ auto sort(T& list) -> void
 
 
 template<class T, class Comparator>
-auto sort(Comparator&& comparator, T& list) -> void
+inline auto sort(Comparator&& comparator, T& list) -> void
 {
     std::sort(
         std::begin(list),
@@ -614,7 +629,7 @@ auto sort(Comparator&& comparator, T& list) -> void
 
 
 template<class Fn, class T>
-auto map(Fn fn, T& list) -> void
+inline auto map(Fn fn, T& list) -> void
 {
     list.erase(
         std::transform(std::begin(list), std::end(list), std::begin(list), fn),
@@ -627,7 +642,7 @@ auto map(Fn fn, T& list) -> void
  *******************************************************************************/
 
 template<class Fn, template<class...> class T, class... U>
-auto foreach(Fn fn, const T<U...>& list) -> void
+inline auto foreach(Fn fn, const T<U...>& list) -> void
 {
     for (const auto& elem : list) {
         fn(elem);
@@ -641,7 +656,7 @@ auto foreach(Fn fn, const T<U...>& list) -> void
 
 
 template<class T>
-auto take(T& list, const std::size_t N) -> void
+inline auto take(T& list, const std::size_t N) -> void
 {
     list.erase(std::copy_n(
                    std::begin(list),
@@ -657,7 +672,7 @@ auto take(T& list, const std::size_t N) -> void
 
 
 template<class T, class Fn>
-auto take_while(T& list, Fn fn) -> void
+inline auto take_while(T& list, Fn fn) -> void
 {
     auto it = std::begin(list);
 
@@ -679,7 +694,7 @@ auto take_while(T& list, Fn fn) -> void
 
 
 template<class T>
-auto drop(T& list, const std::size_t N) -> void
+inline auto drop(T& list, const std::size_t N) -> void
 {
     auto it = std::begin(list);
 
@@ -698,7 +713,7 @@ auto drop(T& list, const std::size_t N) -> void
 
 
 template<class T, class Fn>
-auto drop_while(T& list, Fn fn) -> void
+inline auto drop_while(T& list, Fn fn) -> void
 {
     auto it = std::begin(list);
 
@@ -716,7 +731,7 @@ auto drop_while(T& list, Fn fn) -> void
 
 
 template<class T>
-auto tail(T& list) -> void
+inline auto tail(T& list) -> void
 {
     pop_front(list);
 }
@@ -728,7 +743,7 @@ auto tail(T& list) -> void
 
 
 template<class T>
-auto slice_inner(T& list, std::int64_t i) -> std::int64_t
+inline auto slice_inner(T& list, std::int64_t i) -> std::int64_t
 {
     if (list.empty()) {
         return 0;
@@ -748,7 +763,7 @@ auto slice_inner(T& list, std::int64_t i) -> std::int64_t
 
 
 template<class T>
-auto slice_inner(const T& list, std::int64_t i, std::int64_t j) ->
+inline auto slice_inner(const T& list, std::int64_t i, std::int64_t j) ->
     std::pair<std::int64_t, std::int64_t>
 {
     if (list.empty()) {
@@ -792,14 +807,14 @@ auto slice_inner(const T& list, std::int64_t i, std::int64_t j) ->
 
 
 template<class T>
-auto slice(T&) -> void
+inline auto slice(T&) -> void
 {
 
 }
 
 
 template<class T>
-auto slice(T& list, const std::int64_t i) -> void
+inline auto slice(T& list, const std::int64_t i) -> void
 {
     auto it = std::begin(list);
     std::advance(it, nocopy::slice_inner(list, i));
@@ -809,7 +824,7 @@ auto slice(T& list, const std::int64_t i) -> void
 
 
 template<class T>
-auto slice(T& list, const std::int64_t i, const std::int64_t j) -> void
+inline auto slice(T& list, const std::int64_t i, const std::int64_t j) -> void
 {
     const auto ij = slice_inner(list, i, j);
 
@@ -829,7 +844,7 @@ auto slice(T& list, const std::int64_t i, const std::int64_t j) -> void
 
 
 template<class T, class... Args>
-auto combine(T&& list1, Args... args) -> void
+inline auto combine(T&& list1, Args... args) -> void
 {
     nocopy::push_back(std::forward<T>(list1), std::forward<Args>(args)...);
 }
@@ -844,7 +859,7 @@ auto combine(T&& list1, Args... args) -> void
 
 
 template<class T, class... Args>
-auto push_front(const T& list, Args&&... args) -> T
+inline auto push_front(const T& list, Args&&... args) -> T
 {
     T result{list};
     nocopy::push_front(result, std::forward<Args>(args)...);
@@ -853,7 +868,7 @@ auto push_front(const T& list, Args&&... args) -> T
 
 
 template<class... Args>
-auto push_front(const std::string& list, Args&&... args) -> std::string
+inline auto push_front(const std::string& list, Args&&... args) -> std::string
 {
     std::string result{list};
     nocopy::push_front(result, std::forward<Args>(args)...);
@@ -867,7 +882,7 @@ auto push_front(const std::string& list, Args&&... args) -> std::string
 
 
 template<class T, class... Args>
-auto push_back(const T& list, Args&&... args) -> T
+inline auto push_back(const T& list, Args&&... args) -> T
 {
     T result{list};
     nocopy::push_back(result, std::forward<Args>(args)...);
@@ -876,7 +891,7 @@ auto push_back(const T& list, Args&&... args) -> T
 
 
 template<class... Args>
-auto push_back(const std::string& list, Args&&... args) -> std::string
+inline auto push_back(const std::string& list, Args&&... args) -> std::string
 {
     std::string result{list};
     nocopy::push_back(result, std::forward<Args>(args)...);
@@ -890,7 +905,7 @@ auto push_back(const std::string& list, Args&&... args) -> std::string
 
 
 template<class T>
-auto pop_back(const T& list) -> T
+inline auto pop_back(const T& list) -> T
 {
     T result{list};
     nocopy::pop_back(result);
@@ -899,7 +914,7 @@ auto pop_back(const T& list) -> T
 
 
 template<std::size_t N>
-auto pop_back(const char(&s)[N]) -> std::string
+inline auto pop_back(const char(&s)[N]) -> std::string
 {
     std::string result{s};
     nocopy::pop_back(result);
@@ -913,7 +928,7 @@ auto pop_back(const char(&s)[N]) -> std::string
 
 
 template<class T>
-auto pop_front(const T& list) -> T
+inline auto pop_front(const T& list) -> T
 {
     T result{list};
     nocopy::pop_front(result);
@@ -922,7 +937,7 @@ auto pop_front(const T& list) -> T
 
 
 template<std::size_t N>
-auto pop_front(const char(&s)[N]) -> std::string
+inline auto pop_front(const char(&s)[N]) -> std::string
 {
     std::string result{s};
     nocopy::pop_front(result);
@@ -936,7 +951,7 @@ auto pop_front(const char(&s)[N]) -> std::string
 
 
 template<class T, class... Args>
-auto insert(const T& param, const std::size_t i, Args&&... args) -> T
+inline auto insert(const T& param, const std::size_t i, Args&&... args) -> T
 {
     T result{param};
     nocopy::insert(result, i, std::forward<Args>(args)...);
@@ -945,7 +960,8 @@ auto insert(const T& param, const std::size_t i, Args&&... args) -> T
 
 
 template<class... Args>
-auto insert(const std::string& param, const std::size_t i, Args&&... args) -> std::string
+inline auto insert(const std::string& param, const std::size_t i, Args&&... args) ->
+    std::string
 {
     std::string result{param};
     nocopy::insert(result, i, std::forward<Args>(args)...);
@@ -959,7 +975,7 @@ auto insert(const std::string& param, const std::size_t i, Args&&... args) -> st
 
 
 template<class T, class V>
-auto remove_n(const T& list, const V i) ->
+inline auto remove_n(const T& list, const V i) ->
     typename std::enable_if<
         !std::is_floating_point<V>::value,
         T
@@ -972,7 +988,7 @@ auto remove_n(const T& list, const V i) ->
 
 
 template<std::size_t N, class V>
-auto remove_n(const char(&s)[N], const V i) ->
+inline auto remove_n(const char(&s)[N], const V i) ->
     typename std::enable_if<
         !std::is_floating_point<V>::value,
         std::string
@@ -990,7 +1006,7 @@ auto remove_n(const char(&s)[N], const V i) ->
 
 
 template<class T, class V, class... Args>
-auto remove(const T& list, const V& value, Args&&... args) -> T
+inline auto remove(const T& list, const V& value, Args&&... args) -> T
 {
     T result{list};
     nocopy::remove(result, value);
@@ -1000,7 +1016,7 @@ auto remove(const T& list, const V& value, Args&&... args) -> T
 
 
 template<class V, class... Args>
-auto remove(const std::string& list, const V& value, Args&&... args) -> std::string
+inline auto remove(const std::string& list, const V& value, Args&&... args) -> std::string
 {
     std::string result{list};
     nocopy::remove(result, value);
@@ -1015,7 +1031,7 @@ auto remove(const std::string& list, const V& value, Args&&... args) -> std::str
 
 
 template<class... Args>
-auto reserve(Args&& ...args) -> void
+inline auto reserve(Args&& ...args) -> void
 {
     nocopy::reserve(std::forward<Args>(args)...);
 }
@@ -1027,7 +1043,7 @@ auto reserve(Args&& ...args) -> void
 
 
 template<class FilterFn, class T>
-auto filter(FilterFn filter, const T& list) -> typename std::decay<T>::type
+inline auto filter(FilterFn filter, const T& list) -> typename std::decay<T>::type
 {
     typename std::decay<T>::type result;
     reserve(result, size(list));
@@ -1043,7 +1059,7 @@ auto filter(FilterFn filter, const T& list) -> typename std::decay<T>::type
 
 
 template<class FilterFn, class T>
-auto filter(FilterFn filter, T&& list) -> typename std::decay<T>::type
+inline auto filter(FilterFn filter, T&& list) -> typename std::decay<T>::type
 {
     typename std::decay<T>::type result;
     reserve(result, size(list));
@@ -1064,7 +1080,7 @@ auto filter(FilterFn filter, T&& list) -> typename std::decay<T>::type
 
 
 template<class T>
-auto sort(T&& list) -> typename std::decay<T>::type
+inline auto sort(T&& list) -> typename std::decay<T>::type
 {
     typename std::decay<T>::type result(std::forward<T>(list));
     nocopy::sort(result);
@@ -1073,7 +1089,7 @@ auto sort(T&& list) -> typename std::decay<T>::type
 
 
 template<class T, class Comparator>
-auto sort(Comparator&& comparator, T&& list) -> typename std::decay<T>::type
+inline auto sort(Comparator&& comparator, T&& list) -> typename std::decay<T>::type
 {
     typename std::decay<T>::type result(std::forward<T>(list));
     nocopy::sort(std::forward<Comparator>(comparator), result);
@@ -1087,9 +1103,13 @@ auto sort(Comparator&& comparator, T&& list) -> typename std::decay<T>::type
 
 
 template<class ResultT, class T>
-auto convert(T&& list) -> ResultT
+inline auto convert(T&& list) ->
+    typename std::enable_if<
+        std::is_same<ContainerElemT<T>, ContainerElemT<ResultT>>::value,
+        ResultT
+    >::type
 {
-    return static_cast<ResultT>(std::forward<T>(list));
+    return ResultT(std::begin(list), std::end(list));
 }
 
 
@@ -1099,7 +1119,7 @@ auto convert(T&& list) -> ResultT
 
 
 template<class Fn, template<class...> class T, class... U>
-auto map(Fn fn, const T<U...>& list) -> T<decltype(fn(*std::begin(list)))>
+inline auto map(Fn fn, const T<U...>& list) -> T<decltype(fn(*std::begin(list)))>
 {
     T<decltype(fn(*std::begin(list)))> result;
     for (const auto& elem : list) {
@@ -1115,7 +1135,7 @@ auto map(Fn fn, const T<U...>& list) -> T<decltype(fn(*std::begin(list)))>
 
 
 template<class T, class... Args>
-auto combine(const T& list1, Args... args) -> T
+inline auto combine(const T& list1, Args... args) -> T
 {
     T result;
     nocopy::push_back(result, list1, std::forward<Args>(args)...);
@@ -1124,7 +1144,7 @@ auto combine(const T& list1, Args... args) -> T
 
 
 template<class... Args>
-auto combine(const std::string& list1, Args... args) -> std::string
+inline auto combine(const std::string& list1, Args... args) -> std::string
 {
     std::string result{};
     nocopy::push_back(result, list1, std::forward<Args>(args)...);
@@ -1138,7 +1158,7 @@ auto combine(const std::string& list1, Args... args) -> std::string
 
 
 template<class T>
-auto to_string(const T& value) ->
+inline auto to_string(const T& value) ->
     decltype(std::to_string(value))
 {
     return std::to_string(value);
@@ -1146,7 +1166,7 @@ auto to_string(const T& value) ->
 
 
 template<class T>
-auto to_string(const T& value) ->
+inline auto to_string(const T& value) ->
     typename std::enable_if<
         !std::is_scalar<T>::value,
         decltype(std::declval<std::ostream&>() << value, std::string{})
@@ -1159,7 +1179,7 @@ auto to_string(const T& value) ->
 
 
 template<class T>
-auto to_string(const T& value) ->
+inline auto to_string(const T& value) ->
     typename std::enable_if<
         mp_hasfn_with_signature(T, to_string, std::string(void)),
         std::string
@@ -1170,7 +1190,7 @@ auto to_string(const T& value) ->
 
 
 template<class T>
-auto to_string(const T& value) ->
+inline auto to_string(const T& value) ->
     typename std::enable_if<
         mp_hasfn_with_signature(T, toString, std::string(void)),
         std::string
@@ -1181,7 +1201,7 @@ auto to_string(const T& value) ->
 
 
 template<template<class...> class T, class V, class... Args>
-auto to_string(const T<V, Args...>& value) ->
+inline auto to_string(const T<V, Args...>& value) ->
     typename std::enable_if<
         std::is_same<T<V, Args...>, std::vector<V, Args...>>::value,
         std::string
@@ -1199,7 +1219,7 @@ auto to_string(const T<V, Args...>& value) ->
 
 
 template<template<class...> class T, class V, class... Args>
-auto to_string(const T<V, Args...>& value) ->
+inline auto to_string(const T<V, Args...>& value) ->
     typename std::enable_if<
         std::is_same<T<V, Args...>, std::set<V, Args...>>::value,
         std::string
@@ -1217,7 +1237,7 @@ auto to_string(const T<V, Args...>& value) ->
 
 
 template<template<class...> class T, class V, class... Args>
-auto to_string(const T<V, Args...>& value) ->
+inline auto to_string(const T<V, Args...>& value) ->
     typename std::enable_if<
         std::is_same<T<V, Args...>, std::map<V, Args...>>::value,
         std::string
@@ -1235,7 +1255,7 @@ auto to_string(const T<V, Args...>& value) ->
 
 
 template<template<class...> class T, class V, class... Args>
-auto to_string(const T<V, Args...>& value) ->
+inline auto to_string(const T<V, Args...>& value) ->
     typename std::enable_if<
         std::is_same<T<V, Args...>, std::unordered_map<V, Args...>>::value,
         std::string
@@ -1258,7 +1278,7 @@ auto to_string(const T<V, Args...>& value) ->
 
 
 template<template<class...> class T, class ValueT, class... L>
-auto contains_(const T<ValueT, L...>& list, const ValueT& value) ->
+inline auto contains_(const T<ValueT, L...>& list, const ValueT& value) ->
     typename std::enable_if<
         decltype(*std::begin(list), bool{}){true},
         bool
@@ -1268,14 +1288,14 @@ auto contains_(const T<ValueT, L...>& list, const ValueT& value) ->
 }
 
 
-auto contains_(const std::string& list, const std::string& value) -> bool
+inline auto contains_(const std::string& list, const std::string& value) -> bool
 {
     return list.find(value) != std::string::npos;
 }
 
 
 template<class T, class U>
-auto contains_(const T& list, const U& list2) ->
+inline auto contains_(const T& list, const U& list2) ->
     typename std::enable_if<
         std::is_same<ContainerElemT<T>, ContainerElemT<U>>::value &&
         decltype(list2.empty(), bool{}){true} &&
@@ -1313,7 +1333,7 @@ auto contains_(const T& list, const U& list2) ->
 
 
 template<std::size_t N, class V>
-auto contains_(const char(&s)[N], V&& value) ->
+inline auto contains_(const char(&s)[N], V&& value) ->
     typename std::enable_if<
         std::is_same<V, char>::value,
         bool
@@ -1329,14 +1349,14 @@ auto contains_(const char(&s)[N], V&& value) ->
 
 
 template<class T>
-auto contains(const T& list) -> bool
+inline auto contains(const T&) -> bool
 {
     return true;
 }
 
 
 template<class T, class U, class... Args>
-auto contains(T&& list, U&& list2, Args&&... args) -> bool
+inline auto contains(T&& list, U&& list2, Args&&... args) -> bool
 {
     return
         contains_(std::forward<T>(list), std::forward<U>(list2)) and
@@ -1345,7 +1365,7 @@ auto contains(T&& list, U&& list2, Args&&... args) -> bool
 
 
 template<class U, class... Args>
-auto contains(const std::string& list, U&& list2, Args&&... args) -> bool
+inline auto contains(const std::string& list, U&& list2, Args&&... args) -> bool
 {
     return
         contains_(list, std::forward<U>(list2)) and
@@ -1359,13 +1379,13 @@ auto contains(const std::string& list, U&& list2, Args&&... args) -> bool
 
 
 template<class T, class ValueT>
-auto index(T&& list, const ValueT& value) ->
+inline auto index(T&& list, const ValueT& value) ->
     typename std::enable_if<
         std::is_same<ContainerElemT<T>, ValueT>::value,
-        std::int64_t
+        std::size_t
      >::type
 {
-    int64_t index = 0;
+    std::size_t index = 0;
     for (const auto& elem : list) {
         if (elem == value) {
             return index;
@@ -1380,14 +1400,14 @@ template<class T, class ValueT>
 auto index(T&& list, const ValueT& value, const std::size_t start_i) ->
     typename std::enable_if<
         std::is_same<ContainerElemT<T>, ValueT>::value,
-        std::int64_t
-     >::type
+        std::size_t
+    >::type
 {
     if (start_i >= size(list)) {
         return -1;
     }
 
-    int64_t index = 0;
+    std::size_t index = 0;
     for (const auto& elem : list) {
         if (index < start_i) {
             index++;
@@ -1402,15 +1422,15 @@ auto index(T&& list, const ValueT& value, const std::size_t start_i) ->
 }
 
 
-auto index(const std::string& s, const std::string& value) ->
-    std::int64_t
+inline auto index(const std::string& s, const std::string& value) ->
+    std::size_t
 {
     return s.find(value);
 }
 
 
-auto index(const std::string& s, const std::string& value, const std::size_t start_i) ->
-    std::int64_t
+inline auto index(const std::string& s, const std::string& value, const std::size_t start_i) ->
+    std::size_t
 {
     if (start_i >= size(s)) {
         return -1;
@@ -1425,7 +1445,7 @@ auto index(const std::string& s, const std::string& value, const std::size_t sta
 
 
 template<class T, class ValueT>
-auto find(T&& list, const ValueT& value) ->
+inline auto find(T&& list, const ValueT& value) ->
     typename std::enable_if<
         std::is_same<ContainerElemT<T>, ValueT>::value,
         ValueT*
@@ -1446,7 +1466,7 @@ auto find(T&& list, const ValueT& value) ->
 
 
 template<template<class...> class T, class ValueT, class... L, class FindFn>
-auto find_if(FindFn fn, const T<ValueT, L...>& list) -> ValueT*
+inline auto find_if(FindFn fn, const T<ValueT, L...>& list) -> ValueT*
 {
     for (const auto& elem : list) {
         if (fn(elem)) {
@@ -1463,7 +1483,7 @@ auto find_if(FindFn fn, const T<ValueT, L...>& list) -> ValueT*
 
 
 template<class T, class ValueT>
-auto get(const T& list, const ValueT& value) ->
+inline auto get(const T& list, const ValueT& value) ->
     typename std::enable_if<
         !std::is_array<T>::value &&
         std::is_same<ContainerElemT<T>, ValueT>::value,
@@ -1476,12 +1496,12 @@ auto get(const T& list, const ValueT& value) ->
         }
     }
     throw std::runtime_error(
-        "Value does not exists in list. [" + to_string(value) + "]");
+        "Value does not exists in list.");
 }
 
 
 template<std::size_t N, class V>
-auto get(const char(&s)[N], const V value) ->
+inline auto get(const char(&s)[N], const V value) ->
     typename std::enable_if<
         sizeof(V) == sizeof(char),
         const char&
@@ -1493,7 +1513,7 @@ auto get(const char(&s)[N], const V value) ->
         }
     }
     throw std::runtime_error(
-        "No value found in literal string. [" + to_string(value) + "]");
+        "No value found in literal string.");
 }
 
 
@@ -1503,7 +1523,7 @@ auto get(const char(&s)[N], const V value) ->
 
 
 template<class T>
-auto nth(const T& list, const std::size_t N) ->
+inline auto nth(const T& list, const std::size_t N) ->
     typename std::decay<decltype(*std::begin(list))>::type&
 {
     std::size_t i = 0;
@@ -1525,7 +1545,7 @@ auto nth(const T& list, const std::size_t N) ->
 
 
 template<template<class...> class T, class ValueT, class... L, class FindFn>
-auto get_if(FindFn fn, const T<ValueT, L...>& list) -> ValueT&
+inline auto get_if(FindFn fn, const T<ValueT, L...>& list) -> ValueT&
 {
     for (const auto& elem : list) {
         if (fn(elem)) {
@@ -1543,7 +1563,7 @@ auto get_if(FindFn fn, const T<ValueT, L...>& list) -> ValueT&
 
 
 template<class T, class ValueT>
-auto count(const ValueT& val, const T& param) ->
+inline auto count(const ValueT& val, const T& param) ->
     typename std::enable_if<
         decltype(std::begin(param), true){true},
         std::size_t
@@ -1558,7 +1578,7 @@ auto count(const ValueT& val, const T& param) ->
 
 
 template<class ValueT, class T>
-auto count(const ValueT& value, const T& param) ->
+inline auto count(const ValueT& value, const T& param) ->
     typename std::enable_if<
         decltype(value == param, true){true},
         std::size_t
@@ -1569,7 +1589,7 @@ auto count(const ValueT& value, const T& param) ->
 
 
 template<class ValueT, class T, class... Args>
-auto count(const ValueT& value, const T& param, Args&&... args) -> std::size_t
+inline auto count(const ValueT& value, const T& param, Args&&... args) -> std::size_t
 {
     return count(value, param) + count(value, std::forward<Args>(args)...);
 }
@@ -1581,7 +1601,7 @@ auto count(const ValueT& value, const T& param, Args&&... args) -> std::size_t
 
 
 template<class T, class Fn>
-auto count_if(Fn pred, const T& param) ->
+inline auto count_if(Fn pred, const T& param) ->
     typename std::enable_if<
         decltype(std::begin(param), true){true},
         std::size_t
@@ -1596,7 +1616,7 @@ auto count_if(Fn pred, const T& param) ->
 
 
 template<class Fn, class T>
-auto count_if(const Fn& fn, const T& param) ->
+inline auto count_if(const Fn& fn, const T& param) ->
     typename std::enable_if<
         decltype(fn(param), true){true},
         std::size_t
@@ -1607,7 +1627,7 @@ auto count_if(const Fn& fn, const T& param) ->
 
 
 template<class Fn, class T, class... Args>
-auto count_if(Fn fn, const T& param, Args&&... args) -> std::size_t
+inline auto count_if(Fn fn, const T& param, Args&&... args) -> std::size_t
 {
     return count_if(fn, param) + count_if(fn, std::forward<Args>(args)...);
 }
@@ -1619,7 +1639,7 @@ auto count_if(Fn fn, const T& param, Args&&... args) -> std::size_t
 
 
 template<class T>
-auto all(const T& param) ->
+inline auto all(const T& param) ->
     typename std::enable_if<
         decltype(static_cast<bool>(param), true){true},
         bool
@@ -1630,7 +1650,7 @@ auto all(const T& param) ->
 
 
 template<class T>
-auto all(const T& param) ->
+inline auto all(const T& param) ->
     typename std::enable_if<
         decltype(static_cast<bool>(*std::begin(param)), true){true},
         bool
@@ -1646,7 +1666,7 @@ auto all(const T& param) ->
 
 
 template<class T, class... Args>
-auto all(const T& param, Args&&... args) -> bool
+inline auto all(const T& param, Args&&... args) -> bool
 {
     return all(param) and all(std::forward<Args>(args)...);
 }
@@ -1658,7 +1678,7 @@ auto all(const T& param, Args&&... args) -> bool
 
 
 template<class T, class Fn>
-auto all_if(Fn pred, const T& param) ->
+inline auto all_if(Fn pred, const T& param) ->
     typename std::enable_if<
         decltype(static_cast<bool>(param), true){true},
         bool
@@ -1669,7 +1689,7 @@ auto all_if(Fn pred, const T& param) ->
 
 
 template<class T, class Fn>
-auto all_if(Fn pred, const T& container) ->
+inline auto all_if(Fn pred, const T& container) ->
     typename std::enable_if<
         decltype(std::begin(container), true){true},
         bool
@@ -1684,7 +1704,7 @@ auto all_if(Fn pred, const T& container) ->
 
 
 template<class Fn, class T, class... Args>
-auto all_if(Fn pred, const T& param, Args&&... args) -> bool
+inline auto all_if(Fn pred, const T& param, Args&&... args) -> bool
 {
     return all_if(pred, param) and all_if(pred, std::forward<Args>(args)...);
 }
@@ -1696,7 +1716,7 @@ auto all_if(Fn pred, const T& param, Args&&... args) -> bool
 
 
 template<class T>
-auto any(const T& param) ->
+inline auto any(const T& param) ->
     typename std::enable_if<
         decltype(static_cast<bool>(param), true){true},
         bool
@@ -1707,7 +1727,7 @@ auto any(const T& param) ->
 
 
 template<class T>
-auto any(const T& param) ->
+inline auto any(const T& param) ->
     typename std::enable_if<
         decltype(std::begin(param), true){true},
         bool
@@ -1723,7 +1743,7 @@ auto any(const T& param) ->
 
 
 template<class T, class... Args>
-auto any(const T& param, Args&&... args) -> bool
+inline auto any(const T& param, Args&&... args) -> bool
 {
     return any(param) or any(std::forward<Args>(args)...);
 }
@@ -1735,7 +1755,7 @@ auto any(const T& param, Args&&... args) -> bool
 
 
 template<class T, class Fn>
-auto any_if(Fn pred, const T& param) ->
+inline auto any_if(Fn pred, const T& param) ->
     typename std::enable_if<
         decltype(static_cast<bool>(param), true){true},
         bool
@@ -1746,7 +1766,7 @@ auto any_if(Fn pred, const T& param) ->
 
 
 template<class T, class Fn>
-auto any_if(Fn pred, const T& param) ->
+inline auto any_if(Fn pred, const T& param) ->
     typename std::enable_if<
         decltype(std::begin(param), true){true},
         bool
@@ -1761,7 +1781,7 @@ auto any_if(Fn pred, const T& param) ->
 
 
 template<class Fn, class T, class... Args>
-auto any_if(Fn pred, const T& param, Args&&... args) -> bool
+inline auto any_if(Fn pred, const T& param, Args&&... args) -> bool
 {
     return any_if(pred, param) or any_if(pred, std::forward<Args>(args)...);
 }
@@ -1773,7 +1793,7 @@ auto any_if(Fn pred, const T& param, Args&&... args) -> bool
 
 
 template<class Container>
-auto is_sorted(const Container& container) -> bool
+inline auto is_sorted(const Container& container) -> bool
 {
     return
         std::is_sorted(
@@ -1783,7 +1803,7 @@ auto is_sorted(const Container& container) -> bool
 
 
 template<class Container, class Compare>
-auto is_sorted(const Container& container, Compare&& comp) -> bool
+inline auto is_sorted(const Container& container, Compare&& comp) -> bool
 {
     return
         std::is_sorted(
@@ -1794,7 +1814,7 @@ auto is_sorted(const Container& container, Compare&& comp) -> bool
 
 
 template<std::size_t N>
-auto is_sorted(const char(&s)[N]) -> bool
+inline auto is_sorted(const char(&s)[N]) -> bool
 {
     if (N == 1 or N == 2) {
         return true;
@@ -1810,7 +1830,7 @@ auto is_sorted(const char(&s)[N]) -> bool
 
 
 template<class Container, class T>
-auto reduce(const Container& container, T&& init) -> T
+inline auto reduce(const Container& container, T&& init) -> T
 {
     for (const auto& elem : container) {
         init += elem;
@@ -1820,7 +1840,7 @@ auto reduce(const Container& container, T&& init) -> T
 
 
 template<class Container, class T, class BinaryOperation>
-auto reduce(const Container& container, T&& init, const BinaryOperation& op) -> T
+inline auto reduce(const Container& container, T&& init, const BinaryOperation& op) -> T
 {
     for (const auto& elem : container) {
         init = op(std::forward<T>(init), elem);
@@ -1835,7 +1855,7 @@ auto reduce(const Container& container, T&& init, const BinaryOperation& op) -> 
 
 
 template<class T>
-auto flatten(const T& list) -> ContainerElemT<T>
+inline auto flatten(const T& list) -> ContainerElemT<T>
 {
     ContainerElemT<T> result;
     for (const auto& elem : list) {
@@ -1851,7 +1871,7 @@ auto flatten(const T& list) -> ContainerElemT<T>
 
 
 template<template<class...> class T, class N, class... L>
-auto join(const T<N, L...>& list, const std::string& delimiter = "") ->
+inline auto join(const T<N, L...>& list, const std::string& delimiter = "") ->
     decltype(to_string(*std::begin(list)), std::string{})
 {
     std::string result;
@@ -1865,7 +1885,7 @@ auto join(const T<N, L...>& list, const std::string& delimiter = "") ->
 }
 
 
-auto join(const std::string& s) -> std::string
+inline auto join(const std::string& s) -> std::string
 {
     return s;
 }
@@ -1876,20 +1896,27 @@ auto join(const std::string& s) -> std::string
  *******************************************************************************/
 
 
-auto split(const std::string& text, const std::string& delims = " ") ->
+inline auto split(const std::string& text, const std::string& delims = " ") ->
     std::vector<std::string>
 {
     std::vector<std::string> tokens;
 
-    auto start = text.find_first_not_of(delims);
-    decltype(start) end = 0;
+    auto end = text.find_first_of(delims);
+    decltype(end) start = 0;
 
-    while ((end = text.find_first_of(delims, start)) != std::string::npos) {
+    while (end != std::string::npos) {
         tokens.push_back(text.substr(start, end - start));
-        start = text.find_first_not_of(delims, end);
+
+        start = end + 1;
+
+        if (start == text.size()) {
+            break;
+        }
+
+        end = text.find_first_of(delims, end + 1);
     }
 
-    if (start != std::string::npos) {
+    if (start != std::string::npos and not text.empty()) {
         tokens.push_back(text.substr(start));
     }
 
@@ -1906,7 +1933,7 @@ namespace nocopy {
 
 
 template<class T>
-auto ltrim(T& s) -> void
+inline auto ltrim(T& s) -> void
 {
     const auto wsfront = std::find_if_not(begin(s), end(s), ::isspace);
     s.erase(std::begin(s), wsfront);
@@ -1917,7 +1944,7 @@ auto ltrim(T& s) -> void
 
 
 template<class T>
-auto ltrim(const T& s) -> T
+inline auto ltrim(const T& s) -> T
 {
     const auto wsfront=std::find_if_not(begin(s), end(s), ::isspace);
     const auto wsback=std::end(s);
@@ -1926,7 +1953,7 @@ auto ltrim(const T& s) -> T
 
 
 template<std::size_t N>
-auto ltrim(const char(&s)[N]) -> std::string
+inline auto ltrim(const char(&s)[N]) -> std::string
 {
     return ltrim(std::string{s});
 }
@@ -1941,7 +1968,7 @@ namespace nocopy {
 
 
 template<class T>
-auto rtrim(T& s) -> void
+inline auto rtrim(T& s) -> void
 {
     std::size_t i = size(s) - 1;
     while (i > 0 and ::isspace(s[i])) {
@@ -1960,7 +1987,7 @@ auto rtrim(T& s) -> void
 
 
 template<class T>
-auto rtrim(const T& s) -> T
+inline auto rtrim(const T& s) -> T
 {
     const auto wsfront=std::begin(s);
     std::size_t i = size(s) - 1;
@@ -1977,7 +2004,7 @@ auto rtrim(const T& s) -> T
 
 
 template<std::size_t N>
-auto rtrim(const char(&s)[N]) -> std::string
+inline auto rtrim(const char(&s)[N]) -> std::string
 {
     return rtrim(std::string{s});
 }
@@ -1992,8 +2019,12 @@ namespace nocopy {
 
 
 template<class T>
-auto trim(T& s) -> void
+inline auto trim(T& s) -> void
 {
+    if (s.empty()) {
+        return;
+    }
+
     const auto wsfront = std::find_if_not(std::begin(s), std::end(s), ::isspace);
     s.erase(std::begin(s), wsfront);
 
@@ -2014,8 +2045,12 @@ auto trim(T& s) -> void
 
 
 template<class T>
-auto trim(const T& s) -> T
+inline auto trim(const T& s) -> T
 {
+    if (s.empty()) {
+        return "";
+    }
+
     const auto wsfront=std::find_if_not(begin(s),end(s), ::isspace);
 
     std::size_t i = size(s) - 1;
@@ -2033,7 +2068,7 @@ auto trim(const T& s) -> T
 
 
 template<std::size_t N>
-auto trim(const char(&s)[N]) -> std::string
+inline auto trim(const char(&s)[N]) -> std::string
 {
     return trim(std::string{s});
 }
@@ -2048,7 +2083,7 @@ namespace nocopy {
 
 
 template<class T>
-auto to_lower(T& s) -> decltype(T().begin(), (void)1)
+inline auto to_lower(T& s) -> decltype(T().begin(), (void)1)
 {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
 }
@@ -2058,7 +2093,7 @@ auto to_lower(T& s) -> decltype(T().begin(), (void)1)
 
 
 template<class T>
-auto to_lower(const T& s) -> decltype(T().begin(), T())
+inline auto to_lower(const T& s) -> decltype(T().begin(), T())
 {
     T result(s);
     nocopy::to_lower(result);
@@ -2067,7 +2102,7 @@ auto to_lower(const T& s) -> decltype(T().begin(), T())
 
 
 template<std::size_t N>
-auto to_lower(const char(&s)[N]) -> std::string
+inline auto to_lower(const char(&s)[N]) -> std::string
 {
     return to_lower(std::string{s});
 }
@@ -2082,7 +2117,7 @@ namespace nocopy {
 
 
 template<class T>
-auto to_upper(T& s) -> decltype(T().begin(), (void)1)
+inline auto to_upper(T& s) -> decltype(T().begin(), (void)1)
 {
     std::transform(s.begin(), s.end(), s.begin(), ::toupper);
 }
@@ -2092,7 +2127,7 @@ auto to_upper(T& s) -> decltype(T().begin(), (void)1)
 
 
 template<class T>
-auto to_upper(const T& s) -> decltype(T().begin(), T())
+inline auto to_upper(const T& s) -> decltype(T().begin(), T())
 {
     T result(s);
     nocopy::to_upper(result);
@@ -2101,7 +2136,7 @@ auto to_upper(const T& s) -> decltype(T().begin(), T())
 
 
 template<std::size_t N>
-auto to_upper(const char(&s)[N]) -> std::string
+inline auto to_upper(const char(&s)[N]) -> std::string
 {
     return to_upper(std::string{s});
 }
@@ -2113,7 +2148,7 @@ auto to_upper(const char(&s)[N]) -> std::string
 
 
 template<class T, class U>
-auto starts_with(const T& where, const U& what) ->
+inline auto starts_with(const T& where, const U& what) ->
     typename std::enable_if<
         !mp_hasfn_with_params(T, find, ContainerElemT<U>) &&
         std::is_same<ContainerElemT<T>, ContainerElemT<U>>::value &&
@@ -2135,7 +2170,7 @@ auto starts_with(const T& where, const U& what) ->
 
 
 template<class T, class U>
-auto starts_with(const T& where, const U& what) ->
+inline auto starts_with(const T& where, const U& what) ->
     typename std::enable_if<
         !mp_hasfn_with_params(T, find, U) &&
         decltype(std::begin(where), true){true} &&
@@ -2150,7 +2185,7 @@ auto starts_with(const T& where, const U& what) ->
 
 
 template<class T>
-auto starts_with(const T& where, const T& what) ->
+inline auto starts_with(const T& where, const T& what) ->
     typename std::enable_if<
         decltype(where.find(what), true){true} &&
         !std::is_same<T, std::string>::value,
@@ -2161,7 +2196,7 @@ auto starts_with(const T& where, const T& what) ->
 }
 
 
-auto starts_with(const std::string& where, const std::string& what) -> bool
+inline auto starts_with(const std::string& where, const std::string& what) -> bool
 {
     return where.find(what) == 0;
 }
@@ -2173,7 +2208,7 @@ auto starts_with(const std::string& where, const std::string& what) -> bool
 
 
 template<class T, class U>
-auto ends_with(const T& where, const U& what) ->
+inline auto ends_with(const T& where, const U& what) ->
     typename std::enable_if<
         std::is_same<ContainerElemT<T>, ContainerElemT<U>>::value &&
         !std::is_array<T>::value && !std::is_array<U>::value,
@@ -2200,7 +2235,7 @@ auto ends_with(const T& where, const U& what) ->
 
 
 template<class T, class U>
-auto ends_with(const T& where, const U& what) ->
+inline auto ends_with(const T& where, const U& what) ->
     typename std::enable_if<
         !mp_hasfn_with_params(T, find, U) &&
         decltype(std::begin(where), true){true} &&
@@ -2219,7 +2254,7 @@ auto ends_with(const T& where, const U& what) ->
 
 
 template<class T>
-auto ends_with(const T& where, const T& what) ->
+inline auto ends_with(const T& where, const T& what) ->
     typename std::enable_if<
         decltype(where.find_last_of(what), true){true} &&
         !std::is_same<T, std::string>::value,
@@ -2230,7 +2265,7 @@ auto ends_with(const T& where, const T& what) ->
 }
 
 
-auto ends_with(const std::string& where, const std::string& what) -> bool
+inline auto ends_with(const std::string& where, const std::string& what) -> bool
 {
     return size(where) - 1 - where.find_last_of(what) == 0;
 }
@@ -2244,7 +2279,7 @@ namespace nocopy {
 
 
 template<class T>
-auto capitalize(T& s) ->
+inline auto capitalize(T& s) ->
     typename std::enable_if<
         mp_hasfn_with_signature(T, at, const char&(std::size_t)) ||
         mp_hasfn_with_signature(T, at, char&(std::size_t)),
@@ -2262,7 +2297,7 @@ auto capitalize(T& s) ->
 
 
 template<class T>
-auto capitalize(const T& s) ->
+inline auto capitalize(const T& s) ->
     typename std::enable_if<
         mp_hasfn_with_signature(T, at, const char&(std::size_t)) ||
         mp_hasfn_with_signature(T, at, char&(std::size_t)),
@@ -2276,7 +2311,7 @@ auto capitalize(const T& s) ->
 
 
 template<std::size_t N>
-auto capitalize(const char(&s)[N]) -> std::string
+inline auto capitalize(const char(&s)[N]) -> std::string
 {
     return capitalize(std::string{s});
 }
@@ -2288,7 +2323,7 @@ auto capitalize(const char(&s)[N]) -> std::string
 
 
 template<class T>
-auto take(const T& list, const std::size_t N) -> T
+inline auto take(const T& list, const std::size_t N) -> T
 {
     if (N >= size(list)) {
         return list;
@@ -2306,7 +2341,7 @@ auto take(const T& list, const std::size_t N) -> T
 
 
 template<std::size_t N>
-auto take(const char(&s)[N], const std::size_t i) -> std::string
+inline auto take(const char(&s)[N], const std::size_t i) -> std::string
 {
     return take(std::string{s}, i);
 }
@@ -2318,7 +2353,7 @@ auto take(const char(&s)[N], const std::size_t i) -> std::string
 
 
 template<class T, class Fn>
-auto take_while(const T& list, Fn fn) -> T
+inline auto take_while(const T& list, Fn fn) -> T
 {
     T result;
 
@@ -2335,7 +2370,7 @@ auto take_while(const T& list, Fn fn) -> T
 
 
 template<std::size_t N, class Fn>
-auto take_while(const char(&s)[N], Fn&& fn) -> std::string
+inline auto take_while(const char(&s)[N], Fn&& fn) -> std::string
 {
     return take_while(std::string{s}, std::forward<Fn>(fn));
 }
@@ -2347,7 +2382,7 @@ auto take_while(const char(&s)[N], Fn&& fn) -> std::string
 
 
 template<class T>
-auto drop(const T& list, const std::size_t N) -> T
+inline auto drop(const T& list, const std::size_t N) -> T
 {
     if (N >= size(list)) {
         return T{};
@@ -2365,7 +2400,7 @@ auto drop(const T& list, const std::size_t N) -> T
 
 
 template<std::size_t N>
-auto drop(const char(&s)[N], const std::size_t i) -> std::string
+inline auto drop(const char(&s)[N], const std::size_t i) -> std::string
 {
     return drop(std::string{s}, i);
 }
@@ -2377,7 +2412,7 @@ auto drop(const char(&s)[N], const std::size_t i) -> std::string
 
 
 template<class T, class Fn>
-auto drop_while(const T& list, Fn fn) -> T
+inline auto drop_while(const T& list, Fn fn) -> T
 {
     T result;
 
@@ -2398,7 +2433,7 @@ auto drop_while(const T& list, Fn fn) -> T
 
 
 template<std::size_t N, class Fn>
-auto drop_while(const char(&s)[N], Fn&& fn) -> std::string
+inline auto drop_while(const char(&s)[N], Fn&& fn) -> std::string
 {
     return drop_while(std::string{s}, std::forward<Fn>(fn));
 }
@@ -2410,14 +2445,14 @@ auto drop_while(const char(&s)[N], Fn&& fn) -> std::string
 
 
 template<class T>
-auto slice(const T& list) -> T
+inline auto slice(const T& list) -> T
 {
     return list;
 }
 
 
 template<class T>
-auto slice(const T& list, const std::int64_t i) -> T
+inline auto slice(const T& list, const std::int64_t i) -> T
 {
     auto it = std::begin(list);
     std::advance(it, nocopy::slice_inner(list, i));
@@ -2427,7 +2462,7 @@ auto slice(const T& list, const std::int64_t i) -> T
 
 
 template<class T>
-auto slice(const T& list, const std::int64_t i, const std::int64_t j) -> T
+inline auto slice(const T& list, const std::int64_t i, const std::int64_t j) -> T
 {
     const auto ij = nocopy::slice_inner(list, i, j);
 
@@ -2442,7 +2477,7 @@ auto slice(const T& list, const std::int64_t i, const std::int64_t j) -> T
 
 
 template<class T, class... Args>
-auto slice(const T& list, Args&&... args) ->
+inline auto slice(const T& list, Args&&... args) ->
     typename std::enable_if<
         std::is_array<T>::value,
         std::string
@@ -2458,7 +2493,7 @@ auto slice(const T& list, Args&&... args) ->
 
 
 template<class T>
-auto front(const T& list) -> ContainerElemT<T>&
+inline auto front(const T& list) -> ContainerElemT<T>&
 {
     if (not list.empty()) {
         return const_cast<ContainerElemT<T>&>(*std::begin(list));
@@ -2469,7 +2504,7 @@ auto front(const T& list) -> ContainerElemT<T>&
 
 
 template<std::size_t N>
-auto front(const char(&s)[N]) -> const char&
+inline auto front(const char(&s)[N]) -> const char&
 {
     return s[0];
 }
@@ -2481,7 +2516,7 @@ auto front(const char(&s)[N]) -> const char&
 
 
 template<class T>
-auto back(const T& list) -> ContainerElemT<T>&
+inline auto back(const T& list) -> ContainerElemT<T>&
 {
     if (not list.empty()) {
         return const_cast<ContainerElemT<T>&>(*list.rbegin());
@@ -2492,7 +2527,7 @@ auto back(const T& list) -> ContainerElemT<T>&
 
 
 template<std::size_t N>
-auto back(const char(&s)[N]) -> const char&
+inline auto back(const char(&s)[N]) -> const char&
 {
     return s[N - 2];
 }
@@ -2504,7 +2539,7 @@ auto back(const char(&s)[N]) -> const char&
 
 
 template<class T>
-auto tail(const T& list) -> T
+inline auto tail(const T& list) -> T
 {
     T result {list};
     nocopy::pop_front(result);
@@ -2518,14 +2553,14 @@ auto tail(const T& list) -> T
 
 
 template<class T>
-auto max(const T& param) -> std::size_t
+inline auto max(const T& param) -> std::size_t
 {
     return param;
 }
 
 
 template<class T>
-auto max(const T& param1, const T& param2) ->
+inline auto max(const T& param1, const T& param2) ->
     typename std::enable_if<
         decltype(std::max(param1, param2), true){true},
         std::size_t
@@ -2536,7 +2571,7 @@ auto max(const T& param1, const T& param2) ->
 
 
 template<class T, class... Args>
-auto max(const T& param1, const T& param2, Args&&... args) -> std::size_t
+inline auto max(const T& param1, const T& param2, Args&&... args) -> std::size_t
 {
     return std::max(max(param1, param2), max(std::forward<Args>(args)...));
 }
@@ -2548,14 +2583,14 @@ auto max(const T& param1, const T& param2, Args&&... args) -> std::size_t
 
 
 template<class T>
-auto min(const T& param) -> T
+inline auto min(const T& param) -> T
 {
     return param;
 }
 
 
 template<class T>
-auto min(const T& param1, const T& param2) ->
+inline auto min(const T& param1, const T& param2) ->
     typename std::enable_if<
         decltype(std::min(param1, param2), true){true},
         T
@@ -2566,7 +2601,7 @@ auto min(const T& param1, const T& param2) ->
 
 
 template<class T, class... Args>
-auto min(const T& param1, const T& param2, Args&&... args) -> T
+inline auto min(const T& param1, const T& param2, Args&&... args) -> T
 {
     return std::min(min(param1, param2), min(std::forward<Args>(args)...));
 }
@@ -2577,11 +2612,12 @@ auto min(const T& param1, const T& param2, Args&&... args) -> T
  *******************************************************************************/
 
 
-template<class T>
-auto is_number(const T& s) -> bool
+inline auto is_number(const std::string& s) -> bool
 {
     auto it = std::begin(s);
-    while (it != std::end(s) and std::isdigit(*it)) ++it;
+    while (it != std::end(s) and std::isdigit(*it)) {
+        ++it;
+    }
     return not empty(s) and it == std::end(s);
 }
 
@@ -2592,35 +2628,40 @@ auto is_number(const T& s) -> bool
 
 
 template<class T, class K>
-auto get(const T& param, const K& key) ->
+inline auto get(const T& param, const K& key) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, at, typename T::key_type) &&
         !std::is_array<T>::value,
-        typename std::decay<typename T::mapped_type>::type&
+        typename T::mapped_type&
     >::type
 {
-    return const_cast<typename std::decay<typename T::mapped_type>::type&>(param.at(key));
+    try {
+        return const_cast<typename std::decay<typename T::mapped_type>::type&>(param.at(key));
+    } catch (const std::out_of_range& e) {
+        throw std::runtime_error(
+            "Value does not exists in list.");
+    }
 }
 
 
 template<class T, class K>
-auto find(const T& param, const K& key) ->
+inline auto find(const T& param, const K& key) ->
     typename std::enable_if<
         mp_hasfn_with_params(T, at, typename T::key_type) &&
         !std::is_array<T>::value,
-        typename std::decay<typename T::mapped_type>::type*
+        typename T::mapped_type*
     >::type
 {
     auto it = param.find(key);
     if (it == std::end(param)) {
         return nullptr;
     }
-    return (typename std::decay<typename T::mapped_type>::type*)(&param.at(key));
+    return &param.at(key);
 }
 
 
 template<class T>
-auto keys(const T& param) ->
+inline auto keys(const T& param) ->
     typename std::enable_if<
         decltype(std::declval<typename T::key_type>(), true){true} &&
         !std::is_array<T>::value,
@@ -2634,8 +2675,9 @@ auto keys(const T& param) ->
     return result;
 }
 
+
 template<class T>
-auto values(const T& param) ->
+inline auto values(const T& param) ->
     typename std::enable_if<
         decltype(std::declval<typename T::mapped_type>(), true){true} &&
         !std::is_array<T>::value,

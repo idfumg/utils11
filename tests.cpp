@@ -21,6 +21,49 @@ std::string to_string(const Dar& dar) {
 }
 } // namespace std
 
+#include <functional>
+
+typedef std::pair<int, std::string> Pair;
+
+template <class Fn>
+auto _sortAlike(Fn getKey) ->
+    typename std::enable_if<std::is_lvalue_reference<decltype(getKey(Pair{2, "2"}))>::value, void>::type
+{
+    Pair data = {2, "2"};
+    std::cout << getKey(data) << std::endl;
+}
+
+// template<class T1, class T2>
+// void sortAlike(const T1& v1, T2& v2)
+// {
+//     size_t position = 0;
+//     for (size_t i = 0; i < v1.size(); i++) {
+//         for (size_t j = 0; j < v2.size(); j++) {
+//             if (v1[i] == v2[j]) {
+//                 std::swap(v2[position++], v2[j]);
+//             }
+//         }
+//     }
+// }
+
+void goo_() {
+    // const std::vector<int> v1 = {1,2,3,4,5};
+    // std::vector<int> v2 = {5,4,3,5,1,2,5,6,0,1};
+    // sortAlike(v1, v2);
+    // std:: cout << utils::to_string(v1) << std::endl;
+    // std:: cout << utils::to_string(v2) << std::endl;
+
+    // const std::vector<std::string> v3 = {"A", "Q"};
+    // std::vector<std::string> v4 = {"Q", "A"};
+    // sortAlike(v3, v4);
+    // std:: cout << utils::to_string(v3) << std::endl;
+    // std:: cout << utils::to_string(v4) << std::endl;
+
+    _sortAlike([](const Pair &p) -> const std::string& {
+            std::cout << p.second << std::endl;
+            return (p.second);
+    });
+}
 
 int main() {
     using namespace std;
@@ -68,6 +111,10 @@ int main() {
                        s1) ==
             set<double>{0,1,4,9,16,25,81}));
 
+    assert((utils::map([](const int& i){return i == 0;},
+                       vector<int>{1,2,0}) ==
+            vector<bool>{false, false, true}));
+
     assert((utils::combine(v1, v1) ==
             vector<int>{1,2,3,4,5,1,3,9,0,1,5,1,2,3,4,5,1,3,9,0,1,5}));
 
@@ -87,6 +134,12 @@ int main() {
 
     assert((utils::combine(string{"123"}, vector<char>{'4'}, '5', "6") == "123456"));
     assert((utils::combine(vector<char>{'4'}, string{"12"}, '3') == vector<char>{'4','1','2','3'}));
+
+    assert(utils::index(vector<int>{1,2,3}, 1) == 0);
+    assert(utils::index(vector<int>{1,2,3}, 2) == 1);
+    assert(utils::index(vector<int>{1,2,3}, 3) == 2);
+    assert(utils::index(vector<int>{1,2,3}, 4) == -1);
+    assert(utils::index(vector<int>{1,2,3}, 4, 1) == -1);
 
     assert(utils::contains(vector<int>{1,2,3}, 1));
     assert(utils::contains(set<int>{1,2,3}, 1));
@@ -269,27 +322,39 @@ int main() {
     struct Foo { std::string to_string() const { return "Foo"; } };
     struct Bar { std::string toString() const { return "Bar"; } };
 
+    struct NoToString {};
+
     assert(utils::to_string(Foo{}) == "Foo");
     assert(utils::to_string(Bar{}) == "Bar");
     assert(utils::to_string(Dar{}) == "Dar");
+    //assert(utils::to_string(NoToString{}) == "");
 
     const vector<vector<int>> vv = {{ {1,2,3}, {4,5,6} } };
 
     assert(utils::join(vector<int>{1,2,3}, " ") == "1 2 3");
-    assert(utils::join(vector<int>{1,2,3}) == "1,2,3");
-    assert(utils::join(utils::flatten(vv)) == "1,2,3,4,5,6");
+    assert(utils::join(vector<int>{1,2,3}, ",") == "1,2,3");
+    assert(utils::join(utils::flatten(vv), ",") == "1,2,3,4,5,6");
     assert(utils::join(utils::split("a,b,c", ","), " ") == "a b c");
     assert(utils::join(std::string{"123"}) == "123");
     assert(utils::join("123") == "123");
 
+    assert(utils::split("", "/").empty());
+    assert((utils::split("//", "/") == std::vector<std::string>{"", "", ""}));
+    assert((utils::split("123", "/") == std::vector<std::string>{"123"}));
+    assert((utils::split("123//321", "/") == std::vector<std::string>{"123", "", "321"}));
+
+    assert(utils::trim("") == "");
+    assert(utils::trim(" ") == "");
     assert(utils::trim("   asd  ") == "asd");
     assert(utils::trim("   asd") == "asd");
     assert(utils::trim("asd  ") == "asd");
     assert(utils::trim("asd") == "asd");
+    assert(utils::ltrim("") == "");
     assert(utils::ltrim("  asd  ") == "asd  ");
     assert(utils::ltrim("asd  ") == "asd  ");
     assert(utils::rtrim("  asd  ") == "  asd");
     assert(utils::rtrim("asd  ") == "asd");
+    assert(utils::rtrim("") == "");
 
     assert(utils::combine(std::string("asd "), std::string("fgh")) == "asd fgh");
     assert(utils::combine(std::string("asd "), "fgh") == "asd fgh");
@@ -423,10 +488,15 @@ int main() {
         assert((t == vector<int>{3,5}));
     }
 
+    assert(utils::size("") == 0);
+    assert(utils::size("asd") == 3);
+    assert(utils::size(std::string("asd")) == 3);
     assert(utils::size(set<int>{1,2}) == 2);
     assert(utils::size(set<int>{1,2}, set<int>{1,2,3}) == 5);
     //assert(utils::size(set<int>{1,2}, set<int>{1,2,3}, 1) == 5); // compile-time error
 
+    assert(utils::empty(""));
+    assert(!utils::empty("1"));
     assert(!utils::empty(set<int>{1,2}));
     assert(!utils::empty(set<int>{1,2}, set<int>{1,2,3}));
     assert(utils::empty(set<int>{1,2}, set<int>{1,2,3}, set<int>{}));
@@ -561,6 +631,13 @@ int main() {
             == std::vector<int>{1}));
     assert((utils::values(std::unordered_map<int, string>{{1,"2"}})
            == std::vector<string>{"2"}));
+
+    assert((utils::convert<std::set<int>>(std::vector<int>{1,2,3,3})
+            == std::set<int>{1,2,3}));
+
+
+    assert(utils::is_number("123"));
+    assert(!utils::is_number("123d"));
 
     return 0;
 }
