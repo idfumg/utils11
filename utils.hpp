@@ -1277,6 +1277,18 @@ inline auto to_string(const T<V, Args...>& value) ->
  *******************************************************************************/
 
 
+template<class T, std::size_t Size, class ValueT>
+inline auto contains_(const std::array<T, Size>& list, const ValueT& value) ->
+    typename std::enable_if<
+        decltype(*std::begin(list), bool{}){true},
+        bool
+    >::type
+{
+    return std::find(std::begin(list), std::end(list), value) != std::end(list);
+}
+
+
+
 template<template<class...> class T, class ValueT, class... L>
 inline auto contains_(const T<ValueT, L...>& list, const ValueT& value) ->
     typename std::enable_if<
