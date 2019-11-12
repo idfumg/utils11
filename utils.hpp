@@ -1062,7 +1062,7 @@ template<class FilterFn, class T>
 inline auto filter(FilterFn filter, T&& list) -> typename std::decay<T>::type
 {
     typename std::decay<T>::type result;
-    reserve(result, size(list));
+    reserve(result, utils::size(list));
 
     for (auto&& elem : list) {
         if (filter(elem)) {
@@ -1348,6 +1348,13 @@ inline auto contains_(const char(&s)[N], V&& value) ->
 }
 
 
+template<std::size_t N, class V>
+inline auto contains_(V&& values, const char(&s)[N]) -> bool
+{
+    return contains_(std::forward<V>(values), std::string(s));
+}
+
+
 template<class T>
 inline auto contains(const T&) -> bool
 {
@@ -1372,6 +1379,36 @@ inline auto contains(const std::string& list, U&& list2, Args&&... args) -> bool
         contains(list, std::forward<Args>(args)...);
 }
 
+
+/*******************************************************************************
+ * contains_if
+ *******************************************************************************/
+
+
+template<class T,  class U>
+inline auto contains_if_(T&& lambda, U&& values) -> bool
+{
+    for (const auto& value : values) {
+        if (lambda(value)){
+            return true;
+        }
+    }
+    return false;
+}
+
+template<class T>
+inline auto contains_if(T&&) -> bool
+{
+    return true;
+}
+
+template<class T,  class U, class... Args>
+inline auto contains_if(T&& lambda, U&& values, Args&&... args) -> bool
+{
+    return
+        contains_if_(std::forward<T>(lambda), std::forward<U>(values)) and
+        contains_if(std::forward<T>(lambda), std::forward<Args>(args)...);
+}
 
 /*******************************************************************************
  * index
@@ -1464,13 +1501,13 @@ inline auto find(T&& list, const ValueT& value) ->
  * find_if
  *******************************************************************************/
 
-                 
+
 template<class T, class FindFn>
-inline auto find_if(FindFn fn, const T& list) -> decltype(list.at(0))*
+inline auto find_if(FindFn fn, const T& list) -> decltype(&list.at(0))
 {
-    for (const auto& elem : list) {
+    for (auto& elem : list) {
         if (fn(elem)) {
-            return const_cast<decltype(list.at(0))*>(&elem);
+            return &elem;
         }
     }
     return nullptr;
@@ -1845,7 +1882,7 @@ inline auto reduce(const Container& container, T&& init, const BinaryOperation& 
     for (const auto& elem : container) {
         init = op(std::forward<T>(init), elem);
     }
-    return init;
+    return std::move(init);
 }
 
 
